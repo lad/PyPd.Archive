@@ -1,6 +1,6 @@
 #N canvas 192 80 832 648 10;
 #X msg 138 44 one two three;
-#A msg 57 80 one msg \; one two three msg;
+#X msg 57 80 one msg \; one two three msg;
 #X floatatom 66 142 5 11 22 1 label rcv snd;
 #X symbolatom 65 195 10 11 22 3 label rcv snd;
 #X text 63 245 comment;
