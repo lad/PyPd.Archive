@@ -13,6 +13,10 @@
 #       -stdpath add to search path (relative to PD)
 #       -lib load library (relative to patch)
 #       -stdlib load library (relative to PD)
+# - support for import statement
+#   - to properly support this we need to extract the exported symbols by
+#     the external library. Python ctypes should help, but can't see a way
+#     of reading the exported symbols ala unix nm.
 #
 
 import traceback
@@ -27,9 +31,18 @@ __version__ = "0.1"
 __maintainer__ = "Louis A. Dunne"
 __status__ = "Alpha"
 
-def toPdColor(red, green, blue):
-    """RGB to PD format color"""
-    return (red * -65536) + (green * -256) + (blue * -1)
+
+# Some constants we need to recognize in the patch file
+NCHUNK = '#N'
+CCHUNK = '#C'
+ACHUNK = '#A'
+XCHUNK = '#X'
+CANVAS = 'canvas'
+CANVAS0 = 'canvas0'
+RESTORE = 'restore'
+STRUCT = 'struct'
+OBJ = 'obj'
+
 
 class InvalidPdLine(Exception):
     def __init__(self, pd_line, err_text = 'Invalid line', ex = None):
@@ -40,7 +53,7 @@ class InvalidPdLine(Exception):
                                        self.pd_line.text)
 
 class PdParsedLine:
-    """A parsed representation of a logical PD line. Takes a PdLine object
+    """A parsed representation of a logical PD line. This takes a PdLine object
        and makes the attributes available via their defined names.
 
        Attributes can be accessed like a dict:
@@ -49,8 +62,6 @@ class PdParsedLine:
 
       The former throws an exception if the attribute name is not found.
       The latter returns None."""
-
-    CHUNKS = [ '#N', '#C', '#A', '#X' ]
 
     def __init__(self, pd_line):
         params = pd_line.text.split(' ')
@@ -64,11 +75,11 @@ class PdParsedLine:
 
             #print 'CHUNK: "%s"' % self.chunk
 
-            if self.chunk == '#N':
+            if self.chunk == NCHUNK:
                 self.element = params[0]
                 params = params[1:]
 
-                if self.element != 'canvas' and self.element != 'struct':
+                if self.element != CANVAS and self.element != STRUCT:
                     raise InvalidPdLine(pd_line, '"%s" is not valid with a ' \
                                         '#N chunk type. Only #N canvas and '\
                                         '#N struct are valid.' \
@@ -77,21 +88,21 @@ class PdParsedLine:
                 if pd_line.line_num == 0:
                     # The first canvas definition is different to all other
                     # canvas definitions so we have to special case it.
-                    self.element = 'canvas0'
+                    self.element = CANVAS0
 
-            elif self.chunk == '#C':
+            elif self.chunk == CCHUNK:
                 self.element = params[0]
                 params = params[1:]
-                if self.element != 'restore':
+                if self.element != RESTORE:
                     raise InvalidPdLine(pd_line, '"%s" is not valid with a ' \
                                         '#N chunk type. Only #C restore is ' \
                                         'valid.' % str(self.element))
 
-            elif self.chunk == '#A':
+            elif self.chunk == ACHUNK:
                 self.element = '<array-data>'
                 self.known = True
 
-            elif self.chunk == '#X':
+            elif self.chunk == XCHUNK:
                 self.element = params[0]
                 params = params[1:]
 
@@ -103,7 +114,7 @@ class PdParsedLine:
         # Lookup the attributes defined for the element type. The exception
         # is array data (#A) which doesn't have an element name.
 
-        if self.chunk == '#A':
+        if self.chunk == ACHUNK:
             (self.attr_defs, self.known) = (pdelement.array_def, True)
         else:
             (self.attr_defs, self.known) = pdelement.get(self.element, params)
@@ -131,10 +142,6 @@ class PdParsedLine:
             # Same number of params and attributes
             self.attrs = dict(zip(self.attr_defs, params))
 
-        #if self.chunk == '#A':
-            #print vars(self)
-            #print self.attrs['start_idx']
-
 
     def __getitem__(self, attr_name):
         return self.attrs[attr_name]
@@ -161,8 +168,8 @@ class PdParsedLine:
             vals.remove(None)
 
         # Special case the canvas on line 0
-        if self.element == 'canvas0':
-            return ' '.join([self.chunk, 'canvas'] + vals)
+        if self.element == CANVAS0:
+            return ' '.join([self.chunk, CANVAS] + vals)
         else:
             return ' '.join([self.chunk, self.element] + vals)
 
@@ -170,7 +177,7 @@ class PdParsedLine:
         """Returns the element name or the object name if the element is an
            'obj'"""
 
-        if self.element == 'obj':
+        if self.element == OBJ:
             return self.attrs.get('objType') or self.element
         else:
             return self.element
@@ -207,16 +214,25 @@ class PdLine(object):
                     element = obj.o.element
                     yield obj
 
-                    if element == 'canvas':
+                    if element == CANVAS:
                         # Each sub-patch starts with a canvas object.  The
                         # objects ids in each sub-patch start at zero.
                         parent_ids.append(obj_id)
                         obj_id = 0
-                    elif element == 'restore':
+                    elif element == RESTORE:
                         # Sub-patches finish with a restore object. Object
                         # number then continues where it left off before
                         # the sub-patch.
-                        obj_id = parent_ids.pop() + 1
+                        try:
+                            # TODO: There are "#C restore;" lines that don't
+                            # correspond to previous canvas declarations.
+                            # These have no name, but don't know what they're
+                            # for yet.
+                            if obj.o.get('name'):
+                                obj_id = parent_ids.pop() + 1
+                        except:
+                            print str(obj)
+                            raise
                     else:
                         obj_id += 1
 
@@ -289,12 +305,16 @@ class PdFile:
 
         try:
             for line in self.lines:
-                if line.o.element == 'canvas':
+                # Add a branch to the tree when we hit a sub-patch (canvas)
+                if line.o.element == CANVAS:
                     t = tree_stack[-1].addBranch(line)
                     tree_stack.append(t)
-                elif line.o.element == 'restore':
+                # Move back to the parent branch when we return from the
+                # sub-patch (a restore with a name)
+                elif line.o.element == RESTORE and line.o.get('name'):
                     tree_stack[-1].addLeaf(line)
                     tree_stack.pop()
+                # Otherwise all other objects are leaf nodes
                 else:
                     tree_stack[-1].addLeaf(line)
         except IndexError:

@@ -21,20 +21,25 @@ class OutputTree(object):
     def __init__(self, tabstop = 2):
         self.tab = 0
         self.ts = tabstop
+    def reset(self):
+        self.tab = 0
     def __call__(self, pd_line):
         if pd_line.obj_id == 0:
             self.tab += self.ts
         print '%-6s%s%s' % (str(pd_line.obj_id),
-                            ' ' * self.tab, pd_line.o.name())
+                            ' ' * self.tab, str(pd_line.o))
+                            #' ' * self.tab, pd_line.o.name())
         if pd_line.o.element == 'restore':
             self.tab -= self.ts
 
-class AccumlateUnknown(object):
-    """Callable class which generates a list of all abstractions in the patch
-       file which are not known to PD. Also uses the pdextra.Extra class
+class AccumlateOutput(object):
+    """Callable class which generates a list of the abstractions found in
+       the patch file and stores them in different ways.
        to search a list of directories for the unknown abstractions."""
 
-    def __init__(self, dirs, pd_root = None):
+    MISSING = '** MISSING **'
+
+    def __init__(self, dirs, action, pd_root = None):
         cfg = pdconfig.PdConfigParser(pdplatform.pref_file)
         if not pd_root:
             pd_root = cfg.get('pd_root')
@@ -44,33 +49,65 @@ class AccumlateUnknown(object):
 
         self.extra = pdextra.Extras(include_dirs)
         self.extra.populate()
+        self.action = action
+        self.unknowns = {}
+        self.depends = set()
+        self.missing = set()
+
+    def reset(self):
         self.unknowns = {}
 
     def __call__(self, pd_line):
         if not pd_line.o.known:
             name = pd_line.o.name()
             d = name.split('/')[-1]
-            paths = self.extra.files.get(d) or ['** MISSING **']
-            self.unknowns[name] = paths
+            paths = self.extra.files.get(d)
+            if self.action == EXTRAS:
+                if not paths:
+                    paths = [self.MISSING]
+                self.unknowns[name] = list(paths)
+            elif self.action == DEPENDS:
+                if not paths:
+                    paths = ['%s "%s"' % (self.MISSING, d)]
+                self.depends.update(list(paths))
+            elif self.action == MISSING and not paths:
+                self.missing.add(name)
 
     def __str__(self):
-        return '\n'.join(['%-20s%s' % (name, ' '.join(paths)) \
-                          for (name, paths) in self.unknowns.items()])
+        if self.action == EXTRAS:
+            return '\n'.join(['%-20s%s' % (name, ' '.join(paths)) \
+                            for (name, paths) in self.unknowns.items()])
+        elif self.action == DEPENDS:
+            return '\n'.join(self.depends)
+        elif self.action == MISSING:
+            return '\n'.join(self.missing)
+
+def examples():
+    print """
+TODO EXAMPLES
+"""
+    sys.exit(1)
 
 def usage():
     print """
 Usage: %s [-p pd-install-dir] [-i include-dir] [-i include-dir] ...
-       {-u | -t | -d} file1.pd [file2.pd] ...
+       {-e | -m | -t | -d} file1.pd [file2.pd] ...
 where:
-       -p   Override the pd install dir value from the user's prefs file
-            (%s).
-       -i   Add a directory to the list of directories that will be searched
-            when unknown objects are found in the patch file.
-       -u   Print unknown objects found in the patch file.
-       -u   Print a tree of the structure of the patch file.
+       -e   Print objects found in the patch file which are not known to
+            PD vanilla.
+       -m   Print objects not found in any search directory.
+       -t   Print a tree of the structure of the patch file.
        -d   Print a list of the directories needed for the abstractions used
             in the patch file.
+       -i   Add a directory to the list of directories that will be searched
+            when objects are found in the patch file which are not known to
+            PD vanilla.
+       -p   Override the pd install dir value from the user's prefs file
+            (%s).
+       -h   Prints this help
+       -x   Print some examples.
 """ % (os.path.basename(sys.argv[0]), pdplatform.pref_file)
+    sys.exit(1)
 
 
 ##### MAIN #####
@@ -79,39 +116,50 @@ where:
 if __name__ == '__main__':
     try:
         options, args = getopt.getopt(sys.argv[1:],
-                "p:i:utdh", ["pd=", "include=", "unknown", "tree",
-                           "dependencies", "help"])
+                "emtdi:p:hx", ["extra", "missing", "tree", "dependencies",
+                               "include=", "pd=", "help", "examples"])
     except getopt.GetoptError, err:
         print str(err)
         usage()
         sys.exit(1)
 
-    (pd_root, include_dirs, unknown, tree, depend) = (None, [], False, False,
-                                                      False)
+    (EXTRAS, MISSING, TREE, DEPENDS) = range(1, 5)
+    (action, include_dirs, pd_root) = (None, [], None)
 
     for opt,arg in options:
-        if opt in ('-p', '--pd'):
-            pd_root = os.path.realpath(arg)
+        if opt in ('-e', '--extras'):
+            if action:
+                usage()
+            action = EXTRAS
+        if opt in ('-m', '--missing'):
+            if action:
+                usage()
+            action = MISSING
         elif opt in ('-t', '--tree'):
-            tree = True
-        elif opt in ('-u', '--unknown'):
-            unknown = True
+            if action:
+                usage()
+            action = TREE
         elif opt in ('-d', '--dependencies'):
-            depend = True
+            if action:
+                usage()
+            action = DEPENDS
         elif opt in ('-i', '--include'):
             include_dirs.append(os.path.realpath(arg))
-        elif opt == '-h':
+        if opt in ('-p', '--pd'):
+            pd_root = os.path.realpath(arg)
+        elif opt in ('-h', '--help'):
             usage()
             sys.exit(0)
+        elif opt in ('-x', '--examples'):
+            examples()
 
-    if not args:
+    if not args or not action:
         usage()
-        sys.exit(1)
 
-    if unknown or depend:
+    if action in (EXTRAS, DEPENDS, MISSING):
         # Add the directory containing the patch file to the search dirs
-        out = AccumlateUnknown(include_dirs, pd_root = pd_root)
-    elif tree:
+        out = AccumlateOutput(include_dirs, action, pd_root = pd_root)
+    elif action == TREE:
         out = OutputTree()
     else:
         usage()
@@ -120,20 +168,14 @@ if __name__ == '__main__':
     try:
         output_name = len(args) > 1
         for fname in args:
+            out.reset()
             if output_name:
                 print '\n%s' % fname
 
             f = pd.PdFile(fname)
             f.tree.applyDF(out)
-            if unknown:
+            if action != TREE:
                 print out
-            elif depend:
-                s = set()
-                for val in out.unknowns.values():
-                    for v in val:
-                        s.add(v)
-
-                print '\n'.join(s)
     except Exception, ex:
         print 'File:', fname
         traceback.print_exc(ex)
