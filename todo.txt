@@ -1,0 +1,12 @@
+
+27/10/11
+
+- Add support for declare -path -stdpath -lib -stdlib
+    -path add to search path (relative to patch)
+    -stdpath add to search path (relative to PD installation)
+    -lib load library (relative to patch)
+    -stdlib load library (relative to PD installation)
+
+- Add support for import statement. To properly support this we need to extract
+  the exported symbols by the external library. Python ctypes should help, but
+  can't see a way of reading the exported symbols ala unix nm.

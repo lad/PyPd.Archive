@@ -6,19 +6,6 @@
     PdLine: plain text representation of each logical PD line.
     PdParsedLine: parsed representation of each line/object """
 
-#
-# TODO:
-# - support for declare -path -stdpath -lib -stdlib
-#       -path add to search path (relative to patch)
-#       -stdpath add to search path (relative to PD)
-#       -lib load library (relative to patch)
-#       -stdlib load library (relative to PD)
-# - support for import statement
-#   - to properly support this we need to extract the exported symbols by
-#     the external library. Python ctypes should help, but can't see a way
-#     of reading the exported symbols ala unix nm.
-#
-
 import traceback
 import pdelement
 import pdtree
