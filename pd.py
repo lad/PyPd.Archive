@@ -300,7 +300,7 @@ class PdFile:
     tree = property(get_tree_property)
 
     def _parse(self):
-        self._tree = tree.Tree(self.canvas)
+        self._tree = pdtree.Tree(self.canvas)
         tree_stack = [self._tree]
 
         try:
