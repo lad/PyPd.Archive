@@ -1,0 +1,44 @@
+#N canvas 192 80 832 648 10;
+#X msg 138 44 one two three;
+#A msg 57 80 one msg \; one two three msg;
+#X floatatom 66 142 5 11 22 1 label rcv snd;
+#X symbolatom 65 195 10 11 22 3 label rcv snd;
+#X text 63 245 comment;
+#X obj 67 281 bng 15 250 50 1 snd rcv label 17 7 0 10 -262144 -228856
+-191407;
+#X obj 69 309 tgl 15 0 snc rcv label 17 7 0 10 -262130 -33289 -1 0
+22;
+#X obj 70 344 nbx 5 14 1e+036 1e+037 0 1 snd rcv label 11 22 1 33 -262130
+-66577 -33289 1e+036 256;
+#X obj 75 373 vsl 15 128 1.27 127 0 0 snd rcv label 22 33 2 44 -262130
+-66577 -237574 0 1;
+#X obj 79 546 hsl 128 15 0 127 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 0 1;
+#X obj 283 46 vradio 8 1 0 7 snd rcv label 20 30 2 40 -262130 -66577
+-33289 0;
+#X obj 278 192 hradio 15 1 0 8 empty empty empty 0 -8 0 10 -262144
+-1 -1 0;
+#X obj 283 228 vu 15 120 empty empty -1 -8 0 10 -262130 -33289 1 0
+;
+#X obj 282 386 cnv 15 100 60 snc rcv label 20 12 0 14 -262130 -33289
+0;
+#X obj 499 80 vradio 15 1 0 8 empty empty empty 0 -8 0 10 -262144 -1
+-1 0;
+#N canvas 0 0 450 300 sub 0;
+#X obj 59 74 inlet;
+#X obj 105 75 inlet;
+#X obj 156 77 inlet;
+#X obj 45 153 outlet;
+#X obj 93 156 outlet;
+#X obj 151 150 outlet;
+#X restore 205 137 pd sub;
+#N canvas 0 0 450 300 sub 0;
+#X obj 59 74 inlet;
+#X obj 105 75 inlet;
+#X obj 156 77 inlet;
+#X obj 45 153 outlet;
+#X obj 93 156 outlet;
+#X obj 151 150 outlet;
+#X restore 204 179 pd sub;
+#X connect 0 0 1 0;
+#X connect 15 1 16 2;
