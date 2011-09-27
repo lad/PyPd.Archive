@@ -202,12 +202,13 @@ OBJECT_DEFS = {
     'receive':          [ 'x', 'y', 'objType', 'params' ],
     'bag':              [ 'x', 'y', 'objType' ],
     'vcf~':             [ 'x', 'y', 'objType', 'q' ],
-    'rpole~':           [ 'x', 'y', 'objType', 'coeff' ],
-    'rzero~':           [ 'x', 'y', 'objType', 'coeff' ],
-    'rzero_rev~':       [ 'x', 'y', 'objType', 'coeff' ],
-    'cpole~':           [ 'x', 'y', 'objType', 'r_coeff', 'i_coeff' ],
-    'czero~':           [ 'x', 'y', 'objType', 'r_coeff', 'i_coeff' ],
-    'czero_rev~':       [ 'x', 'y', 'objType', 'r_coeff', 'i_coeff' ],
+    'rpole~':           [ 'x', 'y', 'objType', 're' ],
+    'rzero~':           [ 'x', 'y', 'objType', 're' ],
+    'rzero_rev~':       [ 'x', 'y', 'objType', 're' ],
+    'cpole~':           [ 'x', 'y', 'objType', 're', 'im' ],
+    'czero~':           [ 'x', 'y', 'objType', 're', 'im' ],
+    'czero_rev~':       [ 'x', 'y', 'objType', 're', 'im' ],
+    'import':           [ 'x', 'y', 'objType', 'name' ],
     }
 
 # Object Aliases
@@ -326,7 +327,10 @@ def get(name, params):
                 # Return known if the object is just a number, otherwise it's
                 # an unknown abstraction.
                 try:
-                    float(params[2])
+                    sym = params[2]
+                    if len(sym) > 2 and sym[:2] == '\$':
+                        sym = sym[2:]
+                    float(sym)
                     known = True
                 except ValueError, ex:
                     known = False
