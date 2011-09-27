@@ -21,7 +21,7 @@
 
 import traceback
 import pdelement
-import tree
+import pdtree
 
 __author__ = "Louis A. Dunne"
 __copyright__ = "Copyright 2011, Louis A. Dunne"
