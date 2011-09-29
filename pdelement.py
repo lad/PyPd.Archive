@@ -12,6 +12,9 @@
 # each PD line is parsed.
 #   This requires less code to maintain since there is just a single list of
 # attributes in order here.
+#
+# TODO: Maybe change this to use a text file that non-programmers can edit.
+#
 
 ELEMENT_DEFS = {
     'struct':           [ 'params' ],
