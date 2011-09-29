@@ -10,3 +10,11 @@
 - Add support for import statement. To properly support this we need to extract
   the exported symbols by the external library. Python ctypes should help, but
   can't see a way of reading the exported symbols ala unix nm.
+
+29/10/11
+
+- Generate a tree of abstractions when parsing patch files
+- Decend through the tree until are no more abstractions
+- Print all of these in pdlist
+- This gives the bulk of what is needed to generate stand-alone patches with
+  all included dependencies.
