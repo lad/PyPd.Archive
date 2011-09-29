@@ -20,11 +20,12 @@ class Extras:
                         name = os.path.splitext(f)[0]
                         self.files[name].add(root)
 
+def printExtraDirs(path):
+    e = Extras([path])
+    e.populate()
+    for name, paths in e.files.items():
+        print '%-40s%s' % (name, ' '.join(paths))
 
 if __name__ == '__main__':
     cfg = pdconfig.PdConfigParser(pdplatform.pref_file)
-    e = Extras([os.path.join(cfg.get('pd_root'), 'extra')])
-    e.populate()
-
-    for name, paths in e.files.items():
-        print '%-40s%s' % (name, ' '.join(paths))
+    printExtraDirs(os.path.join(cfg.get('pd_root'), 'extra'))

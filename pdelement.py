@@ -209,6 +209,7 @@ OBJECT_DEFS = {
     'czero~':           [ 'x', 'y', 'objType', 're', 'im' ],
     'czero_rev~':       [ 'x', 'y', 'objType', 're', 'im' ],
     'import':           [ 'x', 'y', 'objType', 'name' ],
+    'namecanvas':       [ 'x', 'y', 'name' ],
     }
 
 # Object Aliases
