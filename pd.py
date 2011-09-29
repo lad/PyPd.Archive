@@ -6,9 +6,10 @@
     PdLine: plain text representation of each logical PD line.
     PdParsedLine: parsed representation of each line/object """
 
-import traceback
 import pdelement
 import pdtree
+from pdexceptions import *
+import pdtest
 
 __author__ = "Louis A. Dunne"
 __copyright__ = "Copyright 2011, Louis A. Dunne"
@@ -25,30 +26,20 @@ CCHUNK = '#C'
 ACHUNK = '#A'
 XCHUNK = '#X'
 CANVAS = 'canvas'
-CANVAS0 = 'canvas0'
+CANVAS0 = 'canvas0'     # canvas on the first line has a different definition
 RESTORE = 'restore'
 STRUCT = 'struct'
 OBJ = 'obj'
 
 
-class InvalidPdLine(Exception):
-    def __init__(self, pd_line, err_text = 'Invalid line', ex = None):
-        (self.pd_line, self.err_text, self.ex) = (pd_line, err_text, ex)
-
-    def __str__(self):
-        return '%s (line %d): "%s"' % (self.err_text, self.pd_line.line_num, \
-                                       self.pd_line.text)
 
 class PdParsedLine:
     """A parsed representation of a logical PD line. This takes a PdLine object
        and makes the attributes available via their defined names.
 
        Attributes can be accessed like a dict:
-          obj['attribute_name'] or
-          obj.get('attribute_name')
-
-      The former throws an exception if the attribute name is not found.
-      The latter returns None."""
+          obj['attribute_name'] or          (throws exception if not found)
+          obj.get('attribute_name')         (returns None if not found)"""
 
     def __init__(self, pd_line):
         params = pd_line.text.split(' ')
@@ -60,8 +51,7 @@ class PdParsedLine:
             self.chunk = params[0]
             params = params[1:]
 
-            #print 'CHUNK: "%s"' % self.chunk
-
+            # "#N canvas" or "#N struct"
             if self.chunk == NCHUNK:
                 self.element = params[0]
                 params = params[1:]
@@ -77,6 +67,7 @@ class PdParsedLine:
                     # canvas definitions so we have to special case it.
                     self.element = CANVAS0
 
+            # "# restore"
             elif self.chunk == CCHUNK:
                 self.element = params[0]
                 params = params[1:]
@@ -85,10 +76,12 @@ class PdParsedLine:
                                         '#N chunk type. Only #C restore is ' \
                                         'valid.' % str(self.element))
 
+            # "#A array-data"
             elif self.chunk == ACHUNK:
                 self.element = '<array-data>'
                 self.known = True
 
+            # "#X ..."
             elif self.chunk == XCHUNK:
                 self.element = params[0]
                 params = params[1:]
@@ -214,7 +207,7 @@ class PdLine(object):
                             # TODO: There are "#C restore;" lines that don't
                             # correspond to previous canvas declarations.
                             # These have no name, but don't know what they're
-                            # for yet.
+                            # for yet. Ignore for now.
                             if obj.o.get('name'):
                                 obj_id = parent_ids.pop() + 1
                         except:
@@ -316,33 +309,18 @@ class PdFile:
 ##### TESTS #####
 
 def testPdFile1(filename):
-    result = "Passed"
     f = PdFile(filename)
     for line in f.lines:
         if str(line) != str(line.o):
-            print 'Error with line', line.line_num
-            print 'Unparsed line: "%s"' % line
-            print 'Parsed line: "%s"' % line.o
-            result = "Failed"
+            raise pdtest.Unexpected(str(line.line_num), str(line), str(line.o))
 
-    print 'testPdFile1("%s") %s' % (filename, result)
-    return f
-
+@pdtest.passfail
 def testPdFile():
-    f = testPdFile1('test1.pd')
-    attrs = f.lines[3].o.attrs
-    if attrs['label'] != 'label' or attrs['receive'] != 'rcv' or \
-       attrs['send'] != 'snd':
-        print 'Error with line', line.line_num
-        print 'Unparsed line: "%s"' % line
-        print 'Parsed line: "%s"' % line.o
+    testPdFile1('test1.pd')
     testPdFile1('test2.pd')
 
 def test():
-    try:
-        testPdFile()
-    except Exception, ex:
-        traceback.print_exc(ex)
+    testPdFile()
 
 if __name__ == '__main__':
     test()

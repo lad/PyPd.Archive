@@ -44,8 +44,9 @@ class AccumlateOutput(object):
         if not pd_root:
             pd_root = cfg.get('pd_root')
 
-        include_dirs = [os.path.join(pd_root, 'extra')] + \
-                       cfg.get_startswith('include') + dirs
+        include_dirs = cfg.getm('include') + dirs
+        if pd_root:
+            include_dirs.append(os.path.join(pd_root, 'extra'))
 
         self.extra = pdextra.Extras(include_dirs)
         self.extra.populate()
