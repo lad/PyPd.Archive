@@ -313,9 +313,6 @@ aliases = [ ('vsl', 'vslider'), ('hsl', 'hslider'), ('tgl', 'toggle'),
 # add new dict keys for the aliases, pointing to existing values
 VANILLA_DEFS.update([(a[0], VANILLA_DEFS[a[1]]) for a in aliases])
 
-array_def = [ 'start_idx', 'values' ]
-
-
 # For now add VANILLA_DEFS in OBJECT_DEFS.
 OBJECT_DEFS.update(VANILLA_DEFS)
 
@@ -348,12 +345,3 @@ def get(name, params):
             return (ELEMENT_DEFS['obj'], True)
     else:
         return (ELEMENT_DEFS[name], True)
-
-def t(x):
-    import ConfigParser
-    c=ConfigParser.RawConfigParser()
-
-    c.read('pdelement.cfg')
-    line = c.get('objects',x)
-    attrs = [a.strip() for a in line.split(',')]
-    return attrs
