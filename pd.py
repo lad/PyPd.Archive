@@ -32,7 +32,6 @@ STRUCT = 'struct'
 OBJ = 'obj'
 
 
-
 class PdParsedLine:
     """A parsed representation of a logical PD line. This takes a PdLine object
        and makes the attributes available via their defined names.
@@ -99,9 +98,9 @@ class PdParsedLine:
         else:
             (self.attr_defs, self.known) = pdelement.get(self.element, params)
 
-        # Make the "attrs" dict to break out each parameter from the PD text
-        # line. The keys come from the attribute defition (attr_defs), the
-        # values are the parameters supplied.
+        # Make an dict (self.attrs) to break out each parameter from the PD
+        # text line. The keys come from the attribute defition
+        # (self.attr_defs), the values are the text line.
 
         self.last_list = False
         len_defs = len(self.attr_defs)
@@ -124,9 +123,11 @@ class PdParsedLine:
 
 
     def __getitem__(self, attr_name):
+        """Access PD attributes by name. Raises exception if not found."""
         return self.attrs[attr_name]
 
     def get(self, attr_name):
+        """Access PD attributes by name. Returns None if not found."""
         return self.attrs.get(attr_name)
 
     def __str__(self):
