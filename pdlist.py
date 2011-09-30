@@ -27,9 +27,8 @@ class OutputTree(object):
         if pd_line.obj_id == 0:
             self.tab += self.ts
         print '%-6s%s%s' % (str(pd_line.obj_id),
-                            ' ' * self.tab, str(pd_line.o))
-                            #' ' * self.tab, pd_line.o.name())
-        if pd_line.o.element == 'restore':
+                            ' ' * self.tab, pd_line.p.name())
+        if pd_line.p.element == 'restore':
             self.tab -= self.ts
 
 class AccumlateOutput(object):
@@ -59,8 +58,8 @@ class AccumlateOutput(object):
         self.unknowns = {}
 
     def __call__(self, pd_line):
-        if not pd_line.o.known:
-            name = pd_line.o.name()
+        if not pd_line.p.known:
+            name = pd_line.p.name()
             d = name.split('/')[-1]
             paths = self.extra.files.get(d)
             if self.action == EXTRAS:

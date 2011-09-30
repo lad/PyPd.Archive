@@ -169,7 +169,7 @@ class PdLine(object):
         (self.text, self.line_num, self.obj_id) = (text, line_num, obj_id)
         assert self.line_num >= 0
         assert self.obj_id >= -1    # Top level canvas is given an ID of -1
-        # This is the parsed object. Not valid self.o is touched
+        # This is the parsed object. Not valid self.p is touched
         self._obj = None
 
     @staticmethod
@@ -191,7 +191,7 @@ class PdLine(object):
                     # Now we have a full logical PD line - make a PdLine
                     # and return it
                     obj = PdLine(logical_line[:-1], line_num, obj_id)
-                    element = obj.o.element
+                    element = obj.p.element
                     yield obj
 
                     if element == CANVAS:
@@ -208,7 +208,7 @@ class PdLine(object):
                             # correspond to previous canvas declarations.
                             # These have no name, but don't know what they're
                             # for yet. Ignore for now.
-                            if obj.o.get('name'):
+                            if obj.p.get('name'):
                                 obj_id = parent_ids.pop() + 1
                         except:
                             print str(obj)
@@ -222,13 +222,13 @@ class PdLine(object):
     def __str__(self):
         return self.text
 
-    def get_o_property(self):
+    def get_p_property(self):
         if not self._obj:
             self._obj = PdParsedLine(self)
         return self._obj
 
     # This is the parsed object. Not valid until touched.
-    o = property(get_o_property)
+    p = property(get_p_property)
 
 class PdFile:
     """Abstraction for a PD format patch file."""
@@ -286,12 +286,12 @@ class PdFile:
         try:
             for line in self.lines:
                 # Add a branch to the tree when we hit a sub-patch (canvas)
-                if line.o.element == CANVAS:
+                if line.p.element == CANVAS:
                     t = tree_stack[-1].addBranch(line)
                     tree_stack.append(t)
                 # Move back to the parent branch when we return from the
                 # sub-patch (a restore with a name)
-                elif line.o.element == RESTORE and line.o.get('name'):
+                elif line.p.element == RESTORE and line.p.get('name'):
                     tree_stack[-1].addLeaf(line)
                     tree_stack.pop()
                 # Otherwise all other objects are leaf nodes
@@ -311,8 +311,8 @@ class PdFile:
 def testPdFile1(filename):
     f = PdFile(filename)
     for line in f.lines:
-        if str(line) != str(line.o):
-            raise pdtest.Unexpected(str(line.line_num), str(line), str(line.o))
+        if str(line) != str(line.p):
+            raise pdtest.Unexpected(str(line.line_num), str(line), str(line.p))
 
 @pdtest.passfail
 def testPdFile():
