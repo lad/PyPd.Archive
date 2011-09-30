@@ -159,7 +159,7 @@ class PdParsedLine:
            'obj'"""
 
         if self.element == OBJ:
-            return self.attrs.get('objType') or self.element
+            return self.attrs.get('obj_type') or self.element
         else:
             return self.element
 
