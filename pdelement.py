@@ -215,6 +215,11 @@ OBJECT_DEFS = {
     'namecanvas':       [ 'x', 'y', 'name' ],
     'threshold~':       [ 'x', 'y', 'trig_val', 'deb_time',
                                     'rest_val', 'rest_time' ],
+    'min~':             [ 'x', 'y', 'obj_type' ],
+    'bang~':            [ 'x', 'y', 'obj_type' ],
+    'netreceive':       [ 'x', 'y', 'obj_type', 'port_num', 'tcp_udp' ],
+    'netsend':          [ 'x', 'y', 'obj_type', 'tcp_udp' ],
+    'tabsend~':         [ 'x', 'y', 'obj_type', 'array_name' ],
     }
 
 # Object Aliases
@@ -330,8 +335,8 @@ def get(name, params):
             if defn:
                 return (defn, True)
             else:
-                # Return known if the object is just a number, otherwise it's
-                # an unknown abstraction.
+                # Return known if the object is just a number or dollar-arg,
+                # otherwise it's an unknown abstraction.
                 try:
                     sym = params[2]
                     if len(sym) > 2 and sym[:2] == '\$':

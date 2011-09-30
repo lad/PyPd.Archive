@@ -16,29 +16,37 @@ import pdplatform
 import pdconfig
 
 class OutputTree(object):
-    """Callable class for a simple tree style output. An object of the class
-       should be called for each line in the patch file."""
+    """Callable class for a simple tree style output."""
+
     def __init__(self, tabstop = 2):
-        self.tab = 0
         self.ts = tabstop
+        self.reset()
+
     def reset(self):
         self.tab = 0
+        self.output = []
+
     def __call__(self, pd_line):
         if pd_line.obj_id == 0:
             self.tab += self.ts
-        print '%-6s%s%s' % (str(pd_line.obj_id),
-                            ' ' * self.tab, pd_line.p.name())
+        self.output.append('%-6s%s%s' % (str(pd_line.obj_id),
+                                         ' ' * self.tab, pd_line.p.name()))
         if pd_line.p.element == 'restore':
             self.tab -= self.ts
 
-class AccumlateOutput(object):
+    def __str__(self):
+        return '\n'.join(self.output)
+
+class OutputAbstractions(object):
     """Callable class which generates a list of the abstractions found in
-       the patch file and stores them in different ways.
-       to search a list of directories for the unknown abstractions."""
+       the patch file and stores them in different ways."""
 
     MISSING = '** MISSING **'
 
     def __init__(self, dirs, action, pd_root = None):
+        # Read the user prefs file and use pdextra.Extras() to generate a list
+        # of all abstractions in the PD installation
+
         cfg = pdconfig.PdConfigParser(pdplatform.pref_file)
         if not pd_root:
             pd_root = cfg.get('pd_root')
@@ -62,11 +70,11 @@ class AccumlateOutput(object):
             name = pd_line.p.name()
             d = name.split('/')[-1]
             paths = self.extra.files.get(d)
-            if self.action == EXTRAS:
+            if self.action == EXTRA:
                 if not paths:
                     paths = [self.MISSING]
                 self.unknowns[name] = list(paths)
-            elif self.action == DEPENDS:
+            elif self.action == DEPEND:
                 if not paths:
                     paths = ['%s "%s"' % (self.MISSING, d)]
                 self.depends.update(list(paths))
@@ -74,38 +82,44 @@ class AccumlateOutput(object):
                 self.missing.add(name)
 
     def __str__(self):
-        if self.action == EXTRAS:
+        if self.action == EXTRA:
             return '\n'.join(['%-20s%s' % (name, ' '.join(paths)) \
                             for (name, paths) in self.unknowns.items()])
-        elif self.action == DEPENDS:
+        elif self.action == DEPEND:
             return '\n'.join(self.depends)
         elif self.action == MISSING:
             return '\n'.join(self.missing)
 
 def examples():
     print """
-TODO EXAMPLES
+pdlist examples
+---------------
+
+...todo...
+
 """
     sys.exit(1)
 
 def usage():
     print """
-Usage: %s [-p pd-install-dir] [-i include-dir] [-i include-dir] ...
-       {-e | -m | -t | -d} file1.pd [file2.pd] ...
-where:
-       -e   Print objects found in the patch file which are not known to
-            PD vanilla.
-       -m   Print objects not found in any search directory.
-       -t   Print a tree of the structure of the patch file.
-       -d   Print a list of the directories needed for the abstractions used
-            in the patch file.
-       -i   Add a directory to the list of directories that will be searched
-            when objects are found in the patch file which are not known to
-            PD vanilla.
-       -p   Override the pd install dir value from the user's prefs file
-            (%s).
-       -h   Prints this help
-       -x   Print some examples.
+Usage: %s [OPTION]... [FILE]...
+Show information about the Pure data patch file given in FILE.
+
+Options:
+  -e, --extra       Print objects found in the patch file which are not known
+                    to PD vanilla.
+  -m, --missing     Print objects not found in any search directory.
+  -t, --tree        Print a tree of the structure of the patch file.
+  -d, --depend      Print a list of the directories needed for the abstractions
+                    used in the patch file.
+  -i, --include     Add a directory to the list of directories that will be
+                    searched when objects are found in the patch file which are
+                    not known to PD vanilla.
+  -p, --pd          Override the pd install dir value from the user's prefs
+                    file (%s).
+  -n, --nonames     Don't output filenames when multiple files are given.
+  -h, --help        Prints this help
+  -x, --examples    Print some examples.
 """ % (os.path.basename(sys.argv[0]), pdplatform.pref_file)
     sys.exit(1)
 
@@ -114,24 +128,28 @@ where:
 
 
 if __name__ == '__main__':
+
+    # First get options and args...
+
     try:
         options, args = getopt.getopt(sys.argv[1:],
-                "emtdi:p:hx", ["extra", "missing", "tree", "dependencies",
-                               "include=", "pd=", "help", "examples"])
+                'emtdi:p:nhx', ['extra', 'missing', 'tree', 'depend',
+                                'include=', 'pd=', 'nonames', 'help',
+                                'examples'])
     except getopt.GetoptError, err:
         print str(err)
         usage()
         sys.exit(1)
 
-    (EXTRAS, MISSING, TREE, DEPENDS) = range(1, 5)
-    (action, include_dirs, pd_root) = (None, [], None)
+    (EXTRA, MISSING, TREE, DEPEND) = range(1, 5)
+    (action, include_dirs, pd_root, print_names) = (None, [], None, True)
 
     for opt,arg in options:
-        if opt in ('-e', '--extras'):
+        if opt in ('-e', '--extra'):
             if action:
                 usage()
-            action = EXTRAS
-        if opt in ('-m', '--missing'):
+            action = EXTRA
+        elif opt in ('-m', '--missing'):
             if action:
                 usage()
             action = MISSING
@@ -139,14 +157,16 @@ if __name__ == '__main__':
             if action:
                 usage()
             action = TREE
-        elif opt in ('-d', '--dependencies'):
+        elif opt in ('-d', '--depend'):
             if action:
                 usage()
-            action = DEPENDS
+            action = DEPEND
         elif opt in ('-i', '--include'):
             include_dirs.append(os.path.realpath(arg))
-        if opt in ('-p', '--pd'):
+        elif opt in ('-p', '--pd'):
             pd_root = os.path.realpath(arg)
+        elif opt in ('-n', '--nonames'):
+            print_names = False
         elif opt in ('-h', '--help'):
             usage()
             sys.exit(0)
@@ -156,26 +176,32 @@ if __name__ == '__main__':
     if not args or not action:
         usage()
 
-    if action in (EXTRAS, DEPENDS, MISSING):
+    # Pick an output class based on the options given
+
+    if action in (EXTRA, DEPEND, MISSING):
         # Add the directory containing the patch file to the search dirs
-        out = AccumlateOutput(include_dirs, action, pd_root = pd_root)
+        out = OutputAbstractions(include_dirs, action, pd_root = pd_root)
     elif action == TREE:
         out = OutputTree()
     else:
         usage()
         sys.exit(1)
 
+    # Run through each file. The output object gets applied to each node
+    # in a tree of objects parsed from each file.
+
     try:
-        output_name = len(args) > 1
+        if print_names and len(args) == 1:
+            print_names = False
         for fname in args:
             out.reset()
-            if output_name:
+            if print_names:
                 print '\n%s' % fname
 
             f = pd.PdFile(fname)
             f.tree.applyDF(out)
-            if action != TREE:
-                print out
+
+            print out
     except Exception, ex:
         print 'File:', fname
         traceback.print_exc(ex)
