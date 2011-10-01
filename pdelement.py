@@ -58,7 +58,6 @@ OBJECT_DEFS = {
     '/~':               [ 'x', 'y', 'obj_type', 'rhs' ],
     '<':                [ 'x', 'y', 'obj_type', 'rhs' ],
     '<=':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '<~':               [ 'x', 'y', 'obj_type', 'rhs' ],
     '==':               [ 'x', 'y', 'obj_type', 'rhs' ],
     '>':                [ 'x', 'y', 'obj_type', 'rhs' ],
     '>=':               [ 'x', 'y', 'obj_type', 'rhs' ],
@@ -138,7 +137,6 @@ OBJECT_DEFS = {
     'outlet~':          [ 'x', 'y', 'obj_type', 'params' ],
     'pack':             [ 'x', 'y', 'obj_type', 'params' ],
     'phasor~':          [ 'x', 'y', 'obj_type', 'freq' ],
-    'pink~':            [ 'x', 'y', 'obj_type' ],
     'pipe':             [ 'x', 'y', 'obj_type', 'params' ],
     'pointer':          [ 'x', 'y', 'obj_type', 'params' ],
     'poly':             [ 'x', 'y', 'obj_type', 'params' ],
@@ -313,7 +311,7 @@ VANILLA_DEFS = {
 
 # Vanilla Aliases
 aliases = [ ('vsl', 'vslider'), ('hsl', 'hslider'), ('tgl', 'toggle'),
-             ('hdl', 'hradio'), ('vdl', 'vradio') ]
+            ('hdl', 'hradio'), ('vdl', 'vradio') ]
 
 # add new dict keys for the aliases, pointing to existing values
 VANILLA_DEFS.update([(a[0], VANILLA_DEFS[a[1]]) for a in aliases])
