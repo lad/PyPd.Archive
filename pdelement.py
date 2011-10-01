@@ -348,6 +348,7 @@ def get(name, params):
                         known = True
                     else:
                         float(sym)
+                        known = True
                 except ValueError, ex:
                     known = False
                 return (ELEMENT_DEFS['obj'], known)
