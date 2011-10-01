@@ -93,7 +93,7 @@ OBJECT_DEFS = {
     'delay':            [ 'x', 'y', 'obj_type', 'ms' ],
     'delwrite~':        [ 'x', 'y', 'obj_type', 'buf', 'ms'],
     'delread~':         [ 'x', 'y', 'obj_type', 'buf', 'ms'],
-    'vd~':              [ 'x', 'y', 'obj_type', 'params' ],
+    'vd~':              [ 'x', 'y', 'obj_type', 'buf' ],
     'div':              [ 'x', 'y', 'obj_type', 'rhs' ],
     'drawcurve':        [ 'x', 'y', 'obj_type', 'params' ],
     'drawnumber':       [ 'x', 'y', 'obj_type', 'params' ],
@@ -107,15 +107,15 @@ OBJECT_DEFS = {
     'expr~':            [ 'x', 'y', 'obj_type', 'params' ],
     'filledcurve':      [ 'x', 'y', 'obj_type', 'params' ],
     'filledpolygon':    [ 'x', 'y', 'obj_type', 'params' ],
-    'float':            [ 'x', 'y', 'obj_type', 'params' ],
+    'float':            [ 'x', 'y', 'obj_type', 'init' ],
     'get':              [ 'x', 'y', 'obj_type', 'params' ],
     'getsize':          [ 'x', 'y', 'obj_type', 'params' ],
     'hip~':             [ 'x', 'y', 'obj_type', 'freq' ],
     'image':            [ 'x', 'y', 'obj_type', 'params' ],
-    'inlet':            [ 'x', 'y', 'obj_type', 'params' ],
-    'inlet~':           [ 'x', 'y', 'obj_type', 'params' ],
-    'int':              [ 'x', 'y', 'obj_type', 'params' ],
-    'line':             [ 'x', 'y', 'obj_type', 'params' ],
+    'inlet':            [ 'x', 'y', 'obj_type', 'name' ],
+    'inlet~':           [ 'x', 'y', 'obj_type', 'name' ],
+    'int':              [ 'x', 'y', 'obj_type', 'init' ],
+    'line':             [ 'x', 'y', 'obj_type', 'init', 'grain_rate' ],
     'line~':            [ 'x', 'y', 'obj_type', 'params' ],
     'loadbang':         [ 'x', 'y', 'obj_type' ],
     'log':              [ 'x', 'y', 'obj_type' 'params' ],
@@ -222,7 +222,6 @@ OBJECT_DEFS = {
     'netreceive':       [ 'x', 'y', 'obj_type', 'port_num', 'tcp_udp' ],
     'netsend':          [ 'x', 'y', 'obj_type', 'tcp_udp' ],
     'tabsend~':         [ 'x', 'y', 'obj_type', 'array_name' ],
-
     }
 
 # Object Aliases
@@ -306,7 +305,7 @@ VANILLA_DEFS = {
                    'label', 'label_x', 'label_y', 'font', 'font_size',
                    'bg_color', 'label_color', 'scale', 'reserved' ],
     'wrap~':     [ 'x', 'y', 'obj_type' ]
-        }
+    }
 
 
 # Vanilla Aliases
