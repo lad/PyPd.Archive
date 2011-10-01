@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 
 import ConfigParser
+import pdplatform
 
 class PdConfigParser(object):
     """Get/Set values in a PyPD config file."""
@@ -111,3 +113,13 @@ class PdConfigParser(object):
         finally:
             if fd:
                 fd.close()
+
+def printPrefs():
+    cfg = PdConfigParser(pdplatform.pref_file)
+
+    print pdplatform.pref_file,'\n'
+    for key, value in cfg.items.items():
+        print '%-30s%s' % (key, value)
+
+if __name__ == '__main__':
+    printPrefs()
