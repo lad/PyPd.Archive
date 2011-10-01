@@ -81,6 +81,10 @@ OBJECT_DEFS = {
     'clip':             [ 'x', 'y', 'obj_type', 'lower', 'upper' ],
     'cos':              [ 'x', 'y', 'obj_type' ],
     'cos~':             [ 'x', 'y', 'obj_type' ],
+    'sin':              [ 'x', 'y', 'obj_type' ],
+    'tan':              [ 'x', 'y', 'obj_type' ],
+    'atan':             [ 'x', 'y', 'obj_type' ],
+    'atan2':            [ 'x', 'y', 'obj_type' ],
     'dac~':             [ 'x', 'y', 'obj_type', 'outputs' ],
     'rmstodb':          [ 'x', 'y', 'obj_type' ],
     'dbtopow':          [ 'x', 'y', 'obj_type' ],
@@ -154,7 +158,6 @@ OBJECT_DEFS = {
     'set':              [ 'x', 'y', 'obj_type', 'params' ],
     'setsize':          [ 'x', 'y', 'obj_type', 'params' ],
     'sig~':             [ 'x', 'y', 'obj_type', 'params' ],
-    'sin':              [ 'x', 'y', 'obj_type', 'params' ],
     'snapshot~':        [ 'x', 'y', 'obj_type', 'params' ],
     'vsnapshot~':       [ 'x', 'y', 'obj_type', 'params' ],
     'spigot':           [ 'x', 'y', 'obj_type', 'params' ],
@@ -168,6 +171,7 @@ OBJECT_DEFS = {
     'tabosc4~':         [ 'x', 'y', 'obj_type', 'params' ],
     'tabread':          [ 'x', 'y', 'obj_type', 'params' ],
     'tabread~':         [ 'x', 'y', 'obj_type', 'params' ],
+    'tabread4':         [ 'x', 'y', 'obj_type', 'params' ],
     'tabread4~':        [ 'x', 'y', 'obj_type', 'params' ],
     'tabreceive~':      [ 'x', 'y', 'obj_type', 'params' ],
     'tabwrite':         [ 'x', 'y', 'obj_type', 'params' ],
@@ -220,6 +224,7 @@ OBJECT_DEFS = {
     'netreceive':       [ 'x', 'y', 'obj_type', 'port_num', 'tcp_udp' ],
     'netsend':          [ 'x', 'y', 'obj_type', 'tcp_udp' ],
     'tabsend~':         [ 'x', 'y', 'obj_type', 'array_name' ],
+
     }
 
 # Object Aliases
@@ -316,6 +321,10 @@ VANILLA_DEFS.update([(a[0], VANILLA_DEFS[a[1]]) for a in aliases])
 # For now add VANILLA_DEFS in OBJECT_DEFS.
 OBJECT_DEFS.update(VANILLA_DEFS)
 
+# Definition for array data
+array_def = [ 'start_idx', 'values' ]
+
+
 def get(name, params):
     """Return the element definition for the given arguments and a flag
        indicating whether we found an appropriate definition. If not we
@@ -336,8 +345,9 @@ def get(name, params):
                     sym = params[2]
                     if len(sym) > 2 and sym[:2] == '\$':
                         sym = sym[2:]
-                    float(sym)
-                    known = True
+                        known = True
+                    else:
+                        float(sym)
                 except ValueError, ex:
                     known = False
                 return (ELEMENT_DEFS['obj'], known)

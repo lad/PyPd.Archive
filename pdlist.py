@@ -37,6 +37,9 @@ class OutputTree(object):
     def __str__(self):
         return '\n'.join(self.output)
 
+    def empty(self):
+        return not self.output
+
 class OutputAbstractions(object):
     """Callable class which generates a list of the abstractions found in
        the patch file and stores them in different ways."""
@@ -89,6 +92,14 @@ class OutputAbstractions(object):
             return '\n'.join(self.depends)
         elif self.action == MISSING:
             return '\n'.join(self.missing)
+
+    def empty(self):
+        if self.action == EXTRA:
+            return not self.unknowns
+        elif self.action == DEPEND:
+            return not self.depends
+        elif self.action == MISSING:
+            return not self.missing
 
 def examples():
     print """
@@ -201,7 +212,8 @@ if __name__ == '__main__':
             f = pd.PdFile(fname)
             f.tree.applyDF(out)
 
-            print out
+            if not out.empty():
+                print out
     except Exception, ex:
         print 'File:', fname
         traceback.print_exc(ex)
