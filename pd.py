@@ -6,6 +6,7 @@
     PdLine: plain text representation of each logical PD line.
     PdParsedLine: parsed representation of each line/object """
 
+import collections
 import pdelement
 import pdtree
 from pdexceptions import *
@@ -66,7 +67,7 @@ class PdParsedLine:
                     # canvas definitions so we have to special case it.
                     self.element = CANVAS0
 
-            # "# restore"
+            # "#C restore"
             elif self.chunk == CCHUNK:
                 self.element = params[0]
                 params = params[1:]
@@ -98,7 +99,7 @@ class PdParsedLine:
         else:
             (self.attr_defs, self.known) = pdelement.get(self.element, params)
 
-        # Make an dict (self.attrs) to break out each parameter from the PD
+        # Make a dict (self.attrs) to break out each parameter from the PD
         # text line. The keys come from the attribute defition
         # (self.attr_defs), the values are the text line.
 
@@ -148,8 +149,10 @@ class PdParsedLine:
         while None in vals:
             vals.remove(None)
 
-        # Special case the canvas on line 0
-        if self.element == CANVAS0:
+        # Special case the canvas on line 0 and array-data
+        if self.chunk == ACHUNK:
+            return ' '.join([self.chunk] + vals)
+        elif self.element == CANVAS0:
             return ' '.join([self.chunk, CANVAS] + vals)
         else:
             return ' '.join([self.chunk, self.element] + vals)
@@ -170,6 +173,7 @@ class PdLine(object):
         (self.text, self.line_num, self.obj_id) = (text, line_num, obj_id)
         assert self.line_num >= 0
         assert self.obj_id >= -1    # Top level canvas is given an ID of -1
+
         # This is the parsed object. Not valid self.p is touched
         self._obj = None
 
@@ -181,7 +185,7 @@ class PdLine(object):
            hit. Also keeps track of file line numbers and object numbers and
            supplies these to PdLine()"""
 
-        (logical_line, obj_id, parent_ids) = ('', -1, [])
+        (logical_line, obj_id, parent_ids) = ('', -1, collections.deque())
 
         for line_num, line in enumerate(lines):
             line = line.rstrip('\n')
