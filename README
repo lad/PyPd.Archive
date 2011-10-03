@@ -1,0 +1,5 @@
+PyPD Version 0.1 Alpha
+
+PyPD is a set of python classes and utilities for parsing and manipulating Pure
+Data patch files (http://puredata.info/). Pure Data (aka Pd) is a real-time
+graphical programming environment for audio, video, and graphical processing.
