@@ -3,3 +3,30 @@ PyPD Version 0.1 Alpha
 PyPD is a set of python classes and utilities for parsing and manipulating Pure
 Data patch files (http://puredata.info/). Pure Data (aka Pd) is a real-time
 graphical programming environment for audio, video, and graphical processing.
+
+The original intent of this project is to fill the gap in managing dependencies
+between Pd patch files. Pd patches may contain references to other patch files
+("abstractions" in Pd terminology) and these in turn may references further
+patch files. However, Pd lacks any way of viewing or managing these
+dependencies.
+
+The main goal is to make it easier to view and manage the dependencies between
+a collection of Pd patch files.
+
+Pd is supported in "vanilla" and "extended" forms. Without any tools it is
+difficult to know if a patch is compatible with pd-vanilla or requires
+pd-extended. It's also easy to inadvertently refer to a local patch file and
+this cause the patch to fail in other installations.
+
+
+Version 0.1 Alpha
+
+- Parsing of Pd files is relatively complete. All element and object types
+  are supported as of pd-vanilla-0.43 and pd 0.42.5-extended.
+- Support needs to be added for declare, but there is a work around by
+  simply adding the declared directory to the search path.
+
+- The first utility pdlist.py now provides the ability to list all dependencies
+  in a given patch file. This can be used when releasing a patch to the
+  community as it can be difficult to know exactly what dependencies are needed
+  to run the patch.
