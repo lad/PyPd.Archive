@@ -31,7 +31,7 @@ ELEMENT_DEFS = {
                           'label', 'receive', 'send' ],
     'msg':              [ 'x', 'y', 'text' ],
     'obj':              [ 'x', 'y', 'obj_type', 'params' ],
-    'restore':          [ 'x', 'y', 'graph_flag', 'name' ],
+    'restore':          [ 'x', 'y', 'name' ],
     'text':             [ 'x', 'y', 'text' ],
     'declare':          [ 'params' ]
     }
