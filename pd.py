@@ -2,8 +2,8 @@
 
 """ Classes for reading, parsing and manipulating Pure Data (.pd) files:
 
-    PdFile: opens and read PD patch files.
-    PdLine: plain text representation of each logical PD line.
+    PdFile: opens and read Pd patch files.
+    PdLine: plain text representation of each logical Pd line.
     PdParsedLine: parsed representation of each line/object """
 
 import sys
@@ -21,7 +21,6 @@ __version__ = "0.1"
 __maintainer__ = "Louis A. Dunne"
 __status__ = "Alpha"
 
-
 # Some constants we need to recognize in the patch file
 NCHUNK = '#N'
 CCHUNK = '#C'
@@ -35,12 +34,15 @@ OBJ = 'obj'
 
 
 class PdParsedLine:
-    """A parsed representation of a logical PD line. This takes a PdLine object
+    """A parsed representation of a logical Pd line. This takes a PdLine object
        and makes the attributes available via their defined names.
 
-       Attributes can be accessed like a dict:
+       Attributes can be accessed and modified like a dict:
           obj['attribute_name'] or          (throws exception if not found)
-          obj.get('attribute_name')         (returns None if not found)"""
+          obj.get('attribute_name')         (returns None if not found)
+
+        Printing the object should result in text appropriate for storing in
+        a Pd patch file."""
 
     def __init__(self, pd_line):
         params = pd_line.text.split(' ')
@@ -100,7 +102,7 @@ class PdParsedLine:
         else:
             (self.attr_defs, self.known) = pdelement.get(self.element, params)
 
-        # Make a dict (self.attrs) to break out each parameter from the PD
+        # Make a dict (self.attrs) to break out each parameter from the Pd
         # text line. The keys come from the attribute defition
         # (self.attr_defs), the values are the text line.
 
@@ -125,15 +127,15 @@ class PdParsedLine:
 
 
     def __getitem__(self, attr_name):
-        """Access PD attributes by name. Raises exception if not found."""
+        """Access Pd attributes by name. Raises exception if not found."""
         return self.attrs[attr_name]
 
     def get(self, attr_name):
-        """Access PD attributes by name. Returns None if not found."""
+        """Access Pd attributes by name. Returns None if not found."""
         return self.attrs.get(attr_name)
 
     def __str__(self):
-        """Returns a textual representation suitable for storing in a PD
+        """Returns a textual representation suitable for storing in a Pd
            patch file."""
 
         # Get all attributes values in the order they appear in the
@@ -168,7 +170,7 @@ class PdParsedLine:
             return self.element
 
 class PdLine(object):
-    """Abstraction for a logical line from a PD format patch file."""
+    """Abstraction for a logical line from a Pd format patch file."""
 
     def __init__(self, text, line_num, obj_id):
         (self.text, self.line_num, self.obj_id) = (text, line_num, obj_id)
@@ -180,8 +182,8 @@ class PdLine(object):
 
     @staticmethod
     def factory(lines):
-        """This is a generator which takes a list of lines from a PD
-           patch file and yields each logical PD line. It loops through
+        """This is a generator which takes a list of lines from a Pd
+           patch file and yields each logical Pd line. It loops through
            the lines, joining them up until the end of line marker (;\\n) is
            hit. Also keeps track of file line numbers and object numbers and
            supplies these to PdLine()"""
@@ -194,11 +196,15 @@ class PdLine(object):
                 logical_line += line
                 if len(logical_line) > 1 and logical_line[-2] != '\\' and \
                    logical_line[-1] == ';':
-                    # Now we have a full logical PD line - make a PdLine
+                    # Now we have a full logical Pd line - make a PdLine
                     # and return it
                     obj = PdLine(logical_line[:-1], line_num, obj_id)
                     element = obj.p.element
                     yield obj
+
+                    # When we come back into the generator we need to figure
+                    # out the next object id, and start new logical line
+                    logical_line = ''
 
                     if element == CANVAS:
                         # Each sub-patch starts with a canvas object.  The
@@ -207,8 +213,8 @@ class PdLine(object):
                         obj_id = 0
                     elif element == RESTORE:
                         # Sub-patches finish with a restore object. Object
-                        # number then continues where it left off before
-                        # the sub-patch.
+                        # ids then continue where they left off before the
+                        # sub-patch.
                         try:
                             # TODO: There are "#C restore;" lines that don't
                             # correspond to previous canvas declarations.
@@ -222,9 +228,6 @@ class PdLine(object):
                     else:
                         obj_id += 1
 
-                    # start a new line when we come back into the generator
-                    logical_line = ''
-
     def __str__(self):
         return self.text
 
@@ -237,7 +240,7 @@ class PdLine(object):
     p = property(get_p_property)
 
 class PdFile:
-    """Abstraction for a PD format patch file."""
+    """Abstraction for a Pd format patch file."""
 
     def _read(self, filename):
         self.filename = filename
@@ -250,7 +253,7 @@ class PdFile:
 
             # We use the universal file reader to cope with unix and dos
             # line endings. This means we'll look for lines ending in ';\n'
-            # to mark the end of logical PD lines.
+            # to mark the end of logical Pd lines.
             fd = open(self.filename, 'U')
             lines = fd.readlines()
         finally:
@@ -264,9 +267,9 @@ class PdFile:
         # read in the whole file
         lines = self._read(filename)
 
-        # PDLine defines a generator which takes the lines from the patch
-        # file and yields each logical PD line. Each logical line defines
-        # a PD element/object, and may span several physical text lines.
+        # PdLine defines a generator which takes the lines from the patch
+        # file and yields each logical Pd line. Each logical line defines
+        # a Pd element/object, and may span several physical text lines.
         line_factory = PdLine.factory(lines)
 
         # first line is supposed to be the top level canvas
