@@ -1,20 +1,24 @@
-
-27/10/11
-
+Declare
+-------
 - Add support for declare -path -stdpath -lib -stdlib
     -path add to search path (relative to patch)
     -stdpath add to search path (relative to PD installation)
     -lib load library (relative to patch)
     -stdlib load library (relative to PD installation)
 
+Import
+------
 - Add support for import statement. To properly support this we need to extract
   the exported symbols by the external library. Python ctypes should help, but
   can't see a way of reading the exported symbols ala unix nm.
 
-29/10/11
 
+Parse Recursive Abstractions
+----------------------------
+- Integrate pdlist/pdextra into pd.py
+- Add the current patch's path into search list
 - Generate a tree of abstractions when parsing patch files
-- Decend through the tree until are no more abstractions
-- Print all of these in pdlist
+- PdParsedLine will contain PdLine objects for abstractions
+- Decend through the PdLine objects until are no more abstractions
 - This gives the bulk of what is needed to generate stand-alone patches with
   all included dependencies.
