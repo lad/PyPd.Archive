@@ -23,10 +23,16 @@ of useful utilities may be written to manipulate objects within patch files.
 Version 0.1 Alpha
 
 - Parsing of Pd files is relatively complete. All element and object types
-  are supported as of pd-vanilla-0.43 and pd 0.42.5-extended.
+  are supported as of pd-vanilla-0.43 and pd 0.42.5-extended, except "declare"
+  and "import".
 
 - Support needs to be added for declare, but there is a work around by
   simply adding the declared directory to the search path.
+
+- Support needs to be added for import. This would require a way of opening
+  and examining a .dll/.so (ala unix nm). Maybe a simple alternative is to
+  include the objects for the common libraries (like Gem), and allow others
+  to add definitions easily for their own libraries.
 
 - Support needs to be added to help in adding/removing objects and renumbering
   object ids.
