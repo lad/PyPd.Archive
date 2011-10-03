@@ -6,6 +6,7 @@
     PdLine: plain text representation of each logical PD line.
     PdParsedLine: parsed representation of each line/object """
 
+import sys
 import collections
 import pdelement
 import pdtree
@@ -320,12 +321,14 @@ def testPdFile1(filename):
             raise pdtest.Unexpected(str(line.line_num), str(line), str(line.p))
 
 @pdtest.passfail
-def testPdFile():
-    testPdFile1('test1.pd')
-    testPdFile1('test2.pd')
+def testPdFile(args):
+    fnames = args or ['test1.pd']
+    for fname in fnames:
+        print fname
+        testPdFile1(fname)
 
 def test():
-    testPdFile()
+    testPdFile(sys.argv[1:])
 
 if __name__ == '__main__':
     test()

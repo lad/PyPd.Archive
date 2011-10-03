@@ -352,4 +352,13 @@ def get(name, params):
         else:
             return (ELEMENT_DEFS['obj'], True)
     else:
-        return (ELEMENT_DEFS[name], True)
+        try:
+            return (ELEMENT_DEFS[name], True)
+        except KeyError, ex:
+            # We may encounter elements which this code doesn't know about.
+            # In this case we add a simple definition to ELEMENT_DEFS.
+            # - Could just use a defaultdict here and omit the warning.
+            #   Is there something better to do here?
+            print 'Warning: No built-in definition for %s.' % name
+            ELEMENT_DEFS[name] = [ 'params' ]
+            return (ELEMENT_DEFS[name], True)
