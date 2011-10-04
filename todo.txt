@@ -1,16 +1,13 @@
-Declare
--------
-- Add support for declare -path -stdpath -lib -stdlib
-    -path add to search path (relative to patch)
-    -stdpath add to search path (relative to PD installation)
-    -lib load library (relative to patch)
-    -stdlib load library (relative to PD installation)
 
-Import
-------
-- Add support for import statement. To properly support this we need to extract
-  the exported symbols by the external library. Python ctypes should help, but
-  can't see a way of reading the exported symbols ala unix nm.
+Object IDs
+----------
+Probably need to be implicit, existing an indices into lists of objects. Better
+than renumbering when inserting/deleting.
+
+Connect objects are troublesome as they refer to object ids. Inserting/deletion
+will require modifying the connect objects. Can't see any way around this. In
+fact it's one of the features the project can offer. It's worth having this
+baked in so you don't have to think of it when writing quick scripts.
 
 
 Parse Recursive Abstractions
@@ -19,6 +16,44 @@ Parse Recursive Abstractions
 - Add the current patch's path into search list
 - Generate a tree of abstractions when parsing patch files
 - PdParsedLine will contain PdLine objects for abstractions
-- Decend through the PdLine objects until are no more abstractions
+- Descend through the PdLine objects until are no more abstractions
 - This gives the bulk of what is needed to generate stand-alone patches with
   all included dependencies.
+
+
+Filters/Select
+--------------
+Provide a way to define a filter used in searching for one or more objects. For
+example to allow a user of the PdPy classes to refer to a hslider in a
+sub-patch it will be necessary to allow them to describe the sub-patch and the
+hslider in some way, and chain these together into a type of search path,
+conceptually similar to XPath or selecting records from a DB.
+
+The filter should probably allow a combination of predicates of the form:
+attribute = value.
+
+Should we support various types of logical operators: and, or, xor, not, etc.
+
+A select operation would apply the given filters to the objects and return a
+list or dict containing the matching objects. These can then be accessed or
+modified in any way.
+
+May also have to provide a way to traverse from an object to it's parent, as
+there's nothing explicit in each object to allow this.
+
+
+Declare
+-------
+- Add support for declare -path -stdpath -lib -stdlib
+    -path add to search path (relative to patch)
+    -stdpath add to search path (relative to PD installation)
+    -lib load library (relative to patch)
+    -stdlib load library (relative to PD installation)
+
+
+Import
+------
+- Add support for import statement. To properly support this we need to extract
+  the exported symbols by the external library. Python ctypes should help, but
+  can't see a way of reading the exported symbols ala unix nm.
+
