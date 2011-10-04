@@ -44,8 +44,8 @@ class PdParsedLine:
         Printing the object should result in text appropriate for storing in
         a Pd patch file."""
 
-    def __init__(self, pd_line):
-        params = pd_line.text.split(' ')
+    def __init__(self, line_text, line_num):
+        params = line_text.split(' ')
 
         # There are various line formats to deal with. All lines start with
         # a chunk type, and most chunk types are followed by an element
@@ -60,12 +60,12 @@ class PdParsedLine:
                 params = params[1:]
 
                 if self.element != CANVAS and self.element != STRUCT:
-                    raise InvalidPdLine(pd_line, '"%s" is not valid with a ' \
-                                        '#N chunk type. Only #N canvas and '\
-                                        '#N struct are valid.' \
+                    raise InvalidPdLine(line_text, line_num, '"%s" is not ' \
+                                        'valid with a #N chunk type. Only #N ' \
+                                        'canvas and #N struct are valid.' \
                                         % str(self.element))
 
-                if pd_line.line_num == 0:
+                if line_num == 0:
                     # The first canvas definition is different to all other
                     # canvas definitions so we have to special case it.
                     self.element = CANVAS0
@@ -75,9 +75,9 @@ class PdParsedLine:
                 self.element = params[0]
                 params = params[1:]
                 if self.element != RESTORE:
-                    raise InvalidPdLine(pd_line, '"%s" is not valid with a ' \
-                                        '#N chunk type. Only #C restore is ' \
-                                        'valid.' % str(self.element))
+                    raise InvalidPdLine(line_text, line_num, '"%s" is not ' \
+                                        'valid with a #N chunk type. Only #C ' \
+                                        'restore is valid.' % str(self.element))
 
             # "#A array-data"
             elif self.chunk == ACHUNK:
@@ -90,9 +90,10 @@ class PdParsedLine:
                 params = params[1:]
 
             else:
-                raise InvalidPdLine(pd_line, 'Unrecognized chunk type')
+                raise InvalidPdLine(line_text, line_num,
+                                    'Unrecognized chunk type')
         except IndexError, ex:
-            raise InvalidPdLine(pd_line, ex = ex)
+            raise InvalidPdLine(line_text, line_num, ex = ex)
 
         # Lookup the attributes defined for the element type. The exception
         # is array data (#A) which doesn't have an element name.
@@ -172,13 +173,14 @@ class PdParsedLine:
 class PdLine(object):
     """Abstraction for a logical line from a Pd format patch file."""
 
-    def __init__(self, text, line_num, obj_id):
-        (self.text, self.line_num, self.obj_id) = (text, line_num, obj_id)
+    def __init__(self, line_text, line_num, obj_id):
+        (self.line_text, self.line_num, self.obj_id) = \
+                        (line_text, line_num, obj_id)
         assert self.line_num >= 0
         assert self.obj_id >= -1    # Top level canvas is given an ID of -1
 
-        # This is the parsed object. Not valid self.p is touched
-        self._obj = None
+        # This is the parsed object.
+        self.p = PdParsedLine(line_text, line_num)
 
     @staticmethod
     def factory(lines):
@@ -229,15 +231,7 @@ class PdLine(object):
                         obj_id += 1
 
     def __str__(self):
-        return self.text
-
-    def get_p_property(self):
-        if not self._obj:
-            self._obj = PdParsedLine(self)
-        return self._obj
-
-    # This is the parsed object. Not valid until touched.
-    p = property(get_p_property)
+        return self.line_text
 
 class PdFile:
     """Abstraction for a Pd format patch file."""

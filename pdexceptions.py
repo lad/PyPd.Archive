@@ -20,8 +20,9 @@ class InvalidPdLine(PdException):
     """This is the only exception this module currently throws - when it
        encounters a line in cannot parse."""
 
-    def __init__(self, pd_line, err_text = 'Invalid line', ex = None):
+    def __init__(self, line_text, line_num, err_text = 'Invalid line',
+                 ex = None):
         super(InvalidPdLine, self).__init__('%s:%d "%s"' % \
-                                            (err_text, pd_line.line_num, \
-                                            pd_line.text))
-        (self.pd_line, self.ex) = (pd_line, ex)
+                                            (err_text, line_num, \
+                                            line_line.text))
+        (self.line_text, self.line_num, self.ex) = (line_text, line_num, ex)
