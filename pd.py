@@ -104,7 +104,7 @@ class PdParsedLine:
             (self.attr_defs, self.known) = pdelement.get(self.element, params)
 
         # Make a dict (self.attrs) to break out each parameter from the Pd
-        # text line. The keys come from the attribute defition
+        # text line. The keys come from the attribute definition
         # (self.attr_defs), the values are the text line.
 
         self.last_list = False
@@ -140,18 +140,15 @@ class PdParsedLine:
            patch file."""
 
         # Get all attributes values in the order they appear in the
-        # attribute definition.
+        # attribute definition, excluding any values set to None.
         if self.last_list:
             # In this case the we had more parameters than attributes so the
             # last attribute is already a list of values
-            vals = [self.attrs[s] for s in self.attr_defs[:-1]] + \
-                   self.attrs[self.attr_defs[-1]]
+            vals = [self.attrs[s] \
+                        for s in self.attr_defs[:-1] if self.attrs[s]] + \
+                   [s for s in self.attrs[self.attr_defs[-1]] if s]
         else:
-            vals = [self.attrs[s] for s in self.attr_defs]
-
-        # Remove all unset attributes
-        while None in vals:
-            vals.remove(None)
+            vals = [self.attrs[s] for s in self.attr_defs if self.attrs[s]]
 
         # Special case the canvas on line 0 and array-data
         if self.chunk == ACHUNK:
@@ -315,7 +312,14 @@ def testPdFile1(filename):
     f = PdFile(filename)
     for line in f.lines:
         if str(line) != str(line.p):
-            raise pdtest.Unexpected(str(line.line_num), str(line), str(line.p))
+            # The lines may differ by whitespace only. Extract all words and
+            # compare separately.
+            same = all([oword == pword \
+                        for (oword, pword) in \
+                        zip(str(line).split(), str(line.p).split())])
+            if not same:
+                raise pdtest.Unexpected(str(line.line_num),
+                                        str(line), str(line.p))
 
 @pdtest.passfail
 def testPdFile(args):
