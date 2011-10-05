@@ -1,3 +1,15 @@
+
+PyPD Version 0.2 Alpha
+
+- Work in progress
+- Rewrite tree implementation
+- Move all parsing and traveral into pd.py
+- Use explicit PdPatch (canvas) class
+- Object-ids are the implicit indices into current patch objects.
+
+---------------------------------------------------------------------------
+
+
 PyPD Version 0.1 Alpha
 
 PyPD is a set of python classes and utilities for parsing and manipulating Pure
