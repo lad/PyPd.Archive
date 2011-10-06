@@ -102,16 +102,19 @@ def testInsert():
     def p(node):
         match.append(node.value)
 
+    # accumulate children only using apply and check results
     tree.apply(pdtree.CHILDREN_ONLY, p)
     expected = [0, 1, 2, 25, 3, 4, 5, 55, 6, 7]
     if expected != match:
         raise pdtest.Unexpected('testInsert', str(expected), str(match))
 
+    # check for expected children
     expected = [0, 1, 2, 25, 3, 4, 5, 55, 6, 7]
     match = [n.value for n in tree.iter(pdtree.CHILDREN_ONLY)]
     if expected != match:
         raise pdtest.Unexpected('testInsert', str(expected), str(match))
 
+    # check for expected children on sub-tree
     expected = [251, 252, 253]
     match = [n.value for n in subt.iter(pdtree.CHILDREN_ONLY)]
     if expected != match:
