@@ -1,11 +1,15 @@
 
 PyPD Version 0.2 Alpha
 
-- Work in progress
-- Rewrite tree implementation
-- Move all parsing and traveral into pd.py
-- Use explicit PdPatch (canvas) class
-- Object-ids are the implicit indices into current patch objects.
+11/10/11
+- Work in progress, almost complete
+- Rewrote a more suitable tree implementation
+- All traveral in PdTree now
+- Moved most of pdlist functionality in pd.py
+- Added PdPatch and PdObject classes
+- Object-ids are now implicit, and only available when traversing the tree
+- Added PdPatchFilter to allow one or more objects to be selected based on
+  their attributes.
 
 ---------------------------------------------------------------------------
 
