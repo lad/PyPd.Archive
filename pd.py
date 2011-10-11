@@ -2,9 +2,10 @@
 
 """ Classes for reading, parsing and manipulating Pure Data (.pd) files:
 
-    PdFile: opens and read Pd patch files.
-    PdLine: plain text representation of each logical Pd line.
-    PdParsedLine: parsed representation of each line/object """
+    PdFile: opens and read Pd patch files
+    PdPatch: parsed representation of a Pd patch file
+    PdObject: parsed representation of each Pd element/object
+    PdPatchFilter: ... """
 
 import sys
 import collections
@@ -106,11 +107,25 @@ class PdObject(object):
 
     def __getitem__(self, attr_name):
         """Access Pd attributes by name. Raises exception if not found."""
-        return self.attrs[attr_name]
+        if attr_name == 'element':
+            return self.element
+        elif attr_name == 'chunk':
+            return self.chunk
+        elif attr_name == 'known':
+            return self.known
+        else:
+            return self.attrs[attr_name]
 
     def get(self, attr_name):
         """Access Pd attributes by name. Returns None if not found."""
-        return self.attrs.get(attr_name)
+        if attr_name == 'element':
+            return self.element
+        elif attr_name == 'chunk':
+            return self.chunk
+        elif attr_name == 'known':
+            return self.known
+        else:
+            return self.attrs.get(attr_name)
 
     def __str__(self):
         """Returns a textual representation suitable for storing in a Pd
@@ -133,12 +148,28 @@ class PdObject(object):
 
         if self.element == OBJ:
             return self.attrs.get('type') or self.element
+        elif self.element == CANVAS:
+            return 'canvas %s' % self.get('name')
         else:
             return self.element
 
 
 class PdPatchFilter(object):
-    pass
+    """Matches all key=value entries in "kwargs" when match() is called with
+       a PdObject instance. All values must match, no support for other
+       logical operators just yet."""
+
+    def __init__(self, **kwargs):
+        self.matches = kwargs
+
+    def match(self, pdo):
+        """Returns true/false if the PdObject instance matches the key=value
+           entries passed to the constructor."""
+        for k,v in self.matches.items():
+            if pdo.get(k) != v:
+                return False
+
+        return True
 
 class PdPatch(object):
     """This is a container type abstraction for a Pure Data patch or sub-patch.
@@ -217,8 +248,6 @@ class PdPatch(object):
         else:
             self._tree[i] = value
 
-        pass
-
     def __delitem__(self, key):
         pass
 
@@ -242,11 +271,19 @@ class PdPatch(object):
     def apply(self, fn):
         return self._tree.apply(fn)
 
-    def insert(self, key, value):
+    def add(self, key, value):
+        pass
+
+    def insert(self, i, key, value):
         pass
 
     def select(self, obj_filter):
-        pass
+        matched = []
+        for (node, obj_id, level) in self._tree:
+            if obj_filter.match(node.value):
+                matched.append((node, obj_id))
+
+        return matched
 
 class PdFile(object):
     """Abstraction for a Pd format patch file."""
@@ -284,7 +321,21 @@ if __name__ == '__main__':
     else:
         f = PdFile(sys.argv[1])
 
-    for (node, obj_id, level) in f.patch:
-        print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
-        #print i.value
-        #print '%d   %s' % (i.value.known, i.value)
+    #for (node, obj_id, level) in f.patch:
+        #print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
+
+    kw={'known': False}
+    filt = PdPatchFilter(**kw)
+
+    for (m,i) in f.patch.select(filt):
+        parents = []
+        textobj = str(m.value)
+        while m.parent:
+            parents.insert(0, m.parent.value)
+            m = m.parent
+
+        ts = 0
+        for p in parents:
+            print '%s%s' % (' ' * ts, str(p.name()))
+            ts += 4
+        print '%s%-4d %s\n' % (' ' * ts, i, textobj)

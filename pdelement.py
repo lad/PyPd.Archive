@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import sys
 
 # Element Definitions
 #
@@ -111,6 +114,7 @@ VANILLA_OBJECTS = {
     'dbtopow~':     [],
     'dbtorms':      [],
     'dbtorms~':     [],
+    'declare':      ['path_type', 'path'],
     'delay':        ['ms'],
     'delread~':     ['buf', 'ms'],
     'delwrite~':    ['buf', 'ms'],
@@ -211,8 +215,8 @@ VANILLA_OBJECTS = {
     'random':       ['max'],
     'readsf~':      ['num_channels', 'buf_size'],
     'realtime':     [],
-    'receive':      ['type', 'src',],
-    'receive~':     ['type', 'src',],
+    'receive':      ['src'],
+    'receive~':     ['src'],
     'rfft~':        [],
     'rifft~':       [],
     'rmstodb':      [],
@@ -226,8 +230,8 @@ VANILLA_OBJECTS = {
     'samplerate~':  [],
     'savepanel':    [],
     'select':       [],
-    'send':         ['type', 'dest',],
-    'send~':        ['type', 'dest',],
+    'send':         ['dest'],
+    'send~':        ['dest'],
     'serial':       [],
     'set':          [],
     'setsize':      [],
@@ -336,7 +340,7 @@ def make_dict(attrs, params):
     return (kv, extra_params)
 
 
-def get(name, params):
+def get(name, params, warn = True):
     """Returns a three valued tuple containing:
         . a list of attribute names in the order they occur in the Pd patch
           file format
@@ -389,9 +393,10 @@ def get(name, params):
 
         # All 'obj' should start with x, y and type.
         if len_params >= OBJ_NUM_ATTRS:
-            attrs = VANILLA_OBJECTS.get(params[TYPE_INDEX])
-            if attrs:
+            oattrs = VANILLA_OBJECTS.get(params[TYPE_INDEX])
+            if oattrs is not None:
                 known = True
+                attrs = OBJ_ATTRS + oattrs
             else:
                 # No definition for this object type, use the minimal 'obj'
                 # attributes
@@ -410,14 +415,32 @@ def get(name, params):
     else:
         try:
             attrs = VANILLA_ELEMENTS[name]
+            known = True
         except KeyError, ex:
             # We may encounter elements which this code doesn't know about.
             # In this case we add an empty definition.
             # - Could just use a defaultdict here and omit the warning.
             #   Is there something better to do here?
-            print 'Warning: No built-in definition for %s.' % name
+            if warn:
+                print 'Warning: No built-in definition for %s.' % name
             VANILLA_ELEMENTS[name] = []
             attrs = []
+            known = False
 
         (kv, extra_params) = make_dict(attrs, params)
-        return (attrs, kv, extra_params, True)
+        return (attrs, kv, extra_params, known)
+
+if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        (attrs, k, e, known) = get('obj', ['x', 'y', sys.argv[1]])
+        print known
+        if not known:
+            (attrs, k, e, known) = get(sys.argv[1], [], warn = False)
+
+        if known:
+            if attrs:
+                print ' '.join(attrs)
+            else:
+                print 'Known but empty definition'
+        else:
+            print 'No definition for %s' % sys.argv[1]

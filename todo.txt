@@ -3,6 +3,7 @@ Object IDs
 ----------
 Probably need to be implicit, existing an indices into lists of objects. Better
 than renumbering when inserting/deleting.
+-> Done, these are now implicit
 
 Connect objects are troublesome as they refer to object ids. Inserting/deletion
 will require modifying the connect objects. Can't see any way around this. In

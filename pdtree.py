@@ -81,8 +81,9 @@ class SimpleTree(object):
                 obj_id += 1
             elif level == (last_level - 1):
                 obj_id = obj_id_stack.pop() + 1
-            elif level == (last_level + 1):
+            else:
                 obj_id = 0
+
             last_level = level
 
             # Yield each node
@@ -92,7 +93,6 @@ class SimpleTree(object):
                 child_stack.extend([(c, level + 1) for c in \
                                     reversed(child._children)])
                 obj_id_stack.append(obj_id)
-                obj_id = -1
 
     def apply(self, fn):
         for (node, level) in self:
