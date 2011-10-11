@@ -39,6 +39,24 @@
 #X obj 45 153 outlet;
 #X obj 93 156 outlet;
 #X obj 151 150 outlet;
+#X floatatom 57 112 5 0 0 0 - - -;
+#N canvas 206 204 450 300 sub.sub 0;
+#X obj 192 28 inlet named-inlet;
+#X obj 185 138 outlet named-outlet;
+#X symbolatom 200 74 10 0 0 0 - - -;
+#X connect 0 0 2 0;
+#X connect 2 0 1 0;
+#X restore 258 237 pd sub.sub;
+#X connect 0 0 6 0;
+#X connect 6 0 3 0;
 #X restore 204 179 pd sub;
+#X obj 458 266 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 459 298 f 1;
+#X floatatom 468 340 5 0 0 0 - - -;
+#X floatatom 496 258 5 0 0 0 - - -;
 #X connect 0 0 1 0;
 #X connect 15 1 16 2;
+#X connect 17 0 18 0;
+#X connect 18 0 19 0;
+#X connect 20 0 18 1;

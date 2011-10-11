@@ -2,367 +2,422 @@
 # Element Definitions
 #
 # We need to maintain the names of each attribute for each PD element. We also
-# need to know the order in which the attributes appear in the lines in the .pd
-# file.
+# need to know the order in which the attributes appear in each textual Pd
+# object definition.
 #   One option is to write a class for each PD element type which would contain
 # attribute names and also store the order these attributes appear in the
-# .pd files.
+# object definition.
 #   The scheme used here stores the attribute names in order for each PD
-# element type. These are used to add attributes to a PdParsedLine object when
-# each PD line is parsed.
-#   This requires less code to maintain since there is just a single list of
-# attributes in order here.
-#
-# TODO: Maybe change this to use a text file that non-programmers can edit.
+# object type. This requires less code to maintain since there is just a
+# single list of attributes in order here.
 #
 
-ELEMENT_DEFS = {
-    'struct':           [ 'params' ],
-    'scalar':           [ 'params' ],
-    'connect':          [ 'src_id', 'src_out', 'tgt_id', 'tgt_out' ],
-    # special case for canvas on the first line
-    'canvas0':          [ 'x', 'y', 'width', 'height', 'font_size' ],
-    'canvas':           [ 'x', 'y', 'width', 'height', 'name', 'open_on_load' ],
-    'array':            [ 'name', 'size', 'save_flag' ],
-    'coords':           [ 'x1', 'y2', 'x2', 'y1', 'width', 'heigth', 'gop' ],
-    'floatatom':        [ 'x', 'y', 'width', 'lower', 'upper', 'label_pos',
-                          'label', 'receive', 'send' ],
-    'symbolatom':       [ 'x', 'y', 'width', 'lower', 'upper', 'label_pos',
-                          'label', 'receive', 'send' ],
-    'msg':              [ 'x', 'y', 'text' ],
-    'obj':              [ 'x', 'y', 'obj_type', 'params' ],
-    'restore':          [ 'x', 'y', 'name' ],
-    'text':             [ 'x', 'y', 'text' ],
-    'declare':          [ 'params' ]
+# These are built-in to pd-vanilla. The keys are all names that can occur after
+# the chunk type. The values are the attributes that are defined for that type.
+# Exceptions are:
+#     'array-data'      Array data (#A) doesn't actually have an element name.
+#                       We use this name for convenience.
+#     'canvas-5'        There are two canvas definitions. One with 5 params
+#     'canvas-6'        at the start of the patch, 6 params otherwise.
+
+# Internal element name for array data. It's the only Pd data that doesn't have
+# an element type, so we use this.
+ARRAY_DATA = 'array-data'
+
+VANILLA_ELEMENTS = {
+    'array':        ['name', 'size', 'save_flag'],
+    ARRAY_DATA:     ['start_idx', 'values'],
+    # There are two types of canvas, define both
+    'canvas-5':     ['x', 'y', 'width', 'height', 'font_size'],
+    'canvas-6':     ['x', 'y', 'width', 'height', 'name', 'open_on_load'],
+    'connect':      ['src_id', 'src_out', 'dest_id', 'dest_out'],
+    'coords':       ['x1', 'y2', 'x2', 'y1', 'width', 'heigth', 'gop'],
+    'declare':      ['path_type', 'path'],
+    'floatatom':    ['x', 'y', 'width', 'lower', 'upper', 'label_pos', 'label',
+                     'receive', 'send'],
+    'import':       ['name'],
+    'msg':          ['x', 'y', 'text'],
+    'obj':          ['x', 'y', 'type'],
+    'restore':      ['x', 'y', 'name'],
+    'scalar':       [],
+    'struct':       [],
+    'symbolatom':   ['x', 'y', 'width', 'lower', 'upper', 'label_pos', 'label',
+                     'receive', 'send'],
+    'text':         ['x', 'y', 'text']
     }
 
-OBJECT_DEFS = {
-    'inlet':            [ 'x', 'y', 'obj_type' ],
-    'outlet':           [ 'x', 'y', 'obj_type' ],
-    'send':             [ 'obj_type', 'dest', ],
-    'send~':            [ 'obj_type', 'dest', ],
-    'receive':          [ 'obj_type', 'src', ],
-    'receive~':         [ 'obj_type', 'src', ],
-    'pack':             [ 'x', 'y', 'obj_type' ],
-    '!=':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '%':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '|':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '&':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '&&':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '*':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '*~':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '+':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '+~':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '-':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '-~':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '/':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '/~':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '<':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '<=':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '==':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '>':                [ 'x', 'y', 'obj_type', 'rhs' ],
-    '>=':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '>>':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '<<':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    '||':               [ 'x', 'y', 'obj_type', 'rhs' ],
-    'abs':              [ 'x', 'y', 'obj_type' ],
-    'adc~':             [ 'x', 'y', 'obj_type', 'inputs' ],
-    'append':           [ 'x', 'y', 'obj_type', 'template_name', 'fields' ],
-    'sublist':          [ 'x', 'y', 'obj_type', 'template_name', 'field' ],
-    'arraysize':        [ 'x', 'y', 'obj_type', 'array_name' ],
-    'atan':             [ 'x', 'y', 'obj_type' ],
-    'bang':             [ 'x', 'y', 'obj_type' ],
-    'biquad~':          [ 'x', 'y', 'obj_type', 'params' ],
-    'block~':           [ 'x', 'y', 'obj_type', 'size', 'overlap',
-                          'resampling' ],
-    'bp~':              [ 'x', 'y', 'obj_type', 'freq', 'q' ],
-    'catch~':           [ 'x', 'y', 'obj_type', 'bus_name' ],
-    'change':           [ 'x', 'y', 'obj_type', 'init' ],
-    'clip':             [ 'x', 'y', 'obj_type', 'lower', 'upper' ],
-    'cos':              [ 'x', 'y', 'obj_type' ],
-    'cos~':             [ 'x', 'y', 'obj_type' ],
-    'sin':              [ 'x', 'y', 'obj_type' ],
-    'tan':              [ 'x', 'y', 'obj_type' ],
-    'atan':             [ 'x', 'y', 'obj_type' ],
-    'atan2':            [ 'x', 'y', 'obj_type' ],
-    'dac~':             [ 'x', 'y', 'obj_type', 'outputs' ],
-    'rmstodb':          [ 'x', 'y', 'obj_type' ],
-    'dbtopow':          [ 'x', 'y', 'obj_type' ],
-    'dbtorms':          [ 'x', 'y', 'obj_type' ],
-    'powtodb':          [ 'x', 'y', 'obj_type' ],
-    'declare':          [ 'x', 'y', 'params' ],
-    'delay':            [ 'x', 'y', 'obj_type', 'ms' ],
-    'delwrite~':        [ 'x', 'y', 'obj_type', 'buf', 'ms'],
-    'delread~':         [ 'x', 'y', 'obj_type', 'buf', 'ms'],
-    'vd~':              [ 'x', 'y', 'obj_type', 'buf' ],
-    'div':              [ 'x', 'y', 'obj_type', 'rhs' ],
-    'drawcurve':        [ 'x', 'y', 'obj_type', 'params' ],
-    'drawnumber':       [ 'x', 'y', 'obj_type', 'params' ],
-    'drawpolygon':      [ 'x', 'y', 'obj_type', 'params' ],
-    'drawsymbol':       [ 'x', 'y', 'obj_type', 'params' ],
-    'drunk':            [ 'x', 'y', 'obj_type', 'upper', 'step' ],
-    'element':          [ 'x', 'y', 'obj_type', 'params' ],
-    'env~':             [ 'x', 'y', 'obj_type', 'window', 'period' ],
-    'exp':              [ 'x', 'y', 'obj_type', 'params' ],
-    'expr':             [ 'x', 'y', 'obj_type', 'params' ],
-    'expr~':            [ 'x', 'y', 'obj_type', 'params' ],
-    'filledcurve':      [ 'x', 'y', 'obj_type', 'params' ],
-    'filledpolygon':    [ 'x', 'y', 'obj_type', 'params' ],
-    'float':            [ 'x', 'y', 'obj_type', 'init' ],
-    'get':              [ 'x', 'y', 'obj_type', 'params' ],
-    'getsize':          [ 'x', 'y', 'obj_type', 'params' ],
-    'hip~':             [ 'x', 'y', 'obj_type', 'freq' ],
-    'image':            [ 'x', 'y', 'obj_type', 'params' ],
-    'inlet':            [ 'x', 'y', 'obj_type', 'name' ],
-    'inlet~':           [ 'x', 'y', 'obj_type', 'name' ],
-    'int':              [ 'x', 'y', 'obj_type', 'init' ],
-    'line':             [ 'x', 'y', 'obj_type', 'init', 'grain_rate' ],
-    'line~':            [ 'x', 'y', 'obj_type', 'params' ],
-    'loadbang':         [ 'x', 'y', 'obj_type' ],
-    'initbang':         [ 'x', 'y', 'obj_type' ],
-    'log':              [ 'x', 'y', 'obj_type' 'params' ],
-    'lop~':             [ 'x', 'y', 'obj_type', 'freq' ],
-    'makefilename':     [ 'x', 'y', 'obj_type', 'params' ],
-    'makenote':         [ 'x', 'y', 'obj_type', 'params' ],
-    'stripnote':        [ 'x', 'y', 'obj_type' ],
-    'makesymbol':       [ 'x', 'y', 'obj_type', 'params' ],
-    'max':              [ 'x', 'y', 'obj_type', 'params' ],
-    'max~':             [ 'x', 'y', 'obj_type' ],
-    'metro':            [ 'x', 'y', 'obj_type', 'params' ],
-    'min':              [ 'x', 'y', 'obj_type', 'params' ],
-    'mod':              [ 'x', 'y', 'obj_type', 'params' ],
-    'moses':            [ 'x', 'y', 'obj_type', 'value' ],
-    'mtof':             [ 'x', 'y', 'obj_type' ],
-    'ftom':             [ 'x', 'y', 'obj_type' ],
-    'noise~':           [ 'x', 'y', 'obj_type' ],
-    'outlet':           [ 'x', 'y', 'obj_type', 'params' ],
-    'outlet~':          [ 'x', 'y', 'obj_type', 'params' ],
-    'pack':             [ 'x', 'y', 'obj_type', 'params' ],
-    'phasor~':          [ 'x', 'y', 'obj_type', 'freq' ],
-    'pipe':             [ 'x', 'y', 'obj_type', 'params' ],
-    'pointer':          [ 'x', 'y', 'obj_type', 'params' ],
-    'poly':             [ 'x', 'y', 'obj_type', 'params' ],
-    'pow':              [ 'x', 'y', 'obj_type', 'params' ],
-    'random':           [ 'x', 'y', 'obj_type', 'params' ],
-    'readsf~':          [ 'x', 'y', 'obj_type', 'params' ],
-    'dmstodb':          [ 'x', 'y', 'obj_type' ],
-    'route':            [ 'x', 'y', 'obj_type', 'params' ],
-    'fft~':             [ 'x', 'y', 'obj_type', 'params' ],
-    'ifft~':            [ 'x', 'y', 'obj_type', 'params' ],
-    'rfft~':            [ 'x', 'y', 'obj_type', 'params' ],
-    'rifft~':           [ 'x', 'y', 'obj_type', 'params' ],
-    'framp~':           [ 'x', 'y', 'obj_type' ],
-    'samphold~':        [ 'x', 'y', 'obj_type' ],
-    'samplerate~':      [ 'x', 'y', 'obj_type' ],
-    'select':           [ 'x', 'y', 'obj_type', 'params' ],
-    'set':              [ 'x', 'y', 'obj_type', 'params' ],
-    'setsize':          [ 'x', 'y', 'obj_type', 'params' ],
-    'sig~':             [ 'x', 'y', 'obj_type', 'params' ],
-    'snapshot~':        [ 'x', 'y', 'obj_type', 'params' ],
-    'vsnapshot~':       [ 'x', 'y', 'obj_type', 'params' ],
-    'spigot':           [ 'x', 'y', 'obj_type', 'params' ],
-    'sqrt':             [ 'x', 'y', 'obj_type', 'params' ],
-    'struct':           [ 'x', 'y', 'obj_type', 'params' ],
-    'swap':             [ 'x', 'y', 'obj_type', 'params' ],
-    'switch~':          [ 'x', 'y', 'obj_type', 'params' ],
-    'symbol':           [ 'x', 'y', 'obj_type', 'params' ],
-    'symbolarray':      [ 'x', 'y', 'obj_type', 'params' ],
-    'table':            [ 'x', 'y', 'obj_type', 'params' ],
-    'tabosc4~':         [ 'x', 'y', 'obj_type', 'params' ],
-    'tabread':          [ 'x', 'y', 'obj_type', 'params' ],
-    'tabread~':         [ 'x', 'y', 'obj_type', 'params' ],
-    'tabread4':         [ 'x', 'y', 'obj_type', 'params' ],
-    'tabread4~':        [ 'x', 'y', 'obj_type', 'params' ],
-    'tabreceive~':      [ 'x', 'y', 'obj_type', 'params' ],
-    'tabwrite':         [ 'x', 'y', 'obj_type', 'params' ],
-    'tabwrite~':        [ 'x', 'y', 'obj_type', 'params' ],
-    'tabplay~':         [ 'x', 'y', 'obj_type', 'params' ],
-    'throw~':           [ 'x', 'y', 'obj_type', 'params' ],
-    'timer':            [ 'x', 'y', 'obj_type', 'params' ],
-    'trigger':          [ 'x', 'y', 'obj_type', 'params' ],
-    'union':            [ 'x', 'y', 'obj_type', 'params' ],
-    'unique':           [ 'x', 'y', 'obj_type', 'params' ],
-    'unpack':           [ 'x', 'y', 'obj_type', 'params' ],
-    'until':            [ 'x', 'y', 'obj_type', 'params' ],
-    'value':            [ 'x', 'y', 'obj_type', 'params' ],
-    'vline~':           [ 'x', 'y', 'obj_type', 'params' ],
-    'writesf~':         [ 'x', 'y', 'obj_type', 'params' ],
-    'osc~':             [ 'x', 'y', 'obj_type', 'params' ],
-    'plot':             [ 'x', 'y', 'obj_type', 'params' ],
-    'soundfiler':       [ 'x', 'y', 'obj_type' ],
-    'realtime':         [ 'x', 'y', 'obj_type', 'params' ],
-    'cputime':          [ 'x', 'y', 'obj_type' ],
-    'notein':           [ 'x', 'y', 'obj_type', 'channel' ],
-    'ctlin':            [ 'x', 'y', 'obj_type', 'controller', 'channel' ],
-    'pgmin':            [ 'x', 'y', 'obj_type', 'channel' ],
-    'bendin':           [ 'x', 'y', 'obj_type', 'channel' ],
-    'touchin':          [ 'x', 'y', 'obj_type', 'channel' ],
-    'polytouchin':      [ 'x', 'y', 'obj_type', 'channel' ],
-    'sysexin':          [ 'x', 'y', 'obj_type' ],
-    'noteout':          [ 'x', 'y', 'obj_type', 'channel' ],
-    'ctlout':           [ 'x', 'y', 'obj_type', 'controller', 'channel' ],
-    'pgmout':           [ 'x', 'y', 'obj_type', 'channel' ],
-    'bendout':          [ 'x', 'y', 'obj_type', 'channel' ],
-    'touchout':         [ 'x', 'y', 'obj_type', 'channel' ],
-    'polytouchout':     [ 'x', 'y', 'obj_type', 'channel' ],
-    'midiin':           [ 'x', 'y', 'obj_type', 'params' ],
-    'midiout':          [ 'x', 'y', 'obj_type', 'params' ],
-    'serial':           [ 'x', 'y', 'obj_type', 'params' ],
-    'receive':          [ 'x', 'y', 'obj_type', 'params' ],
-    'bag':              [ 'x', 'y', 'obj_type' ],
-    'vcf~':             [ 'x', 'y', 'obj_type', 'q' ],
-    'rpole~':           [ 'x', 'y', 'obj_type', 're' ],
-    'rzero~':           [ 'x', 'y', 'obj_type', 're' ],
-    'rzero_rev~':       [ 'x', 'y', 'obj_type', 're' ],
-    'cpole~':           [ 'x', 'y', 'obj_type', 're', 'im' ],
-    'czero~':           [ 'x', 'y', 'obj_type', 're', 'im' ],
-    'czero_rev~':       [ 'x', 'y', 'obj_type', 're', 'im' ],
-    'import':           [ 'x', 'y', 'obj_type', 'name' ],
-    'namecanvas':       [ 'x', 'y', 'name' ],
-    'threshold~':       [ 'x', 'y', 'trig_val', 'deb_time',
-                                    'rest_val', 'rest_time' ],
-    'min~':             [ 'x', 'y', 'obj_type' ],
-    'bang~':            [ 'x', 'y', 'obj_type' ],
-    'netreceive':       [ 'x', 'y', 'obj_type', 'port_num', 'tcp_udp' ],
-    'netsend':          [ 'x', 'y', 'obj_type', 'tcp_udp' ],
-    'tabsend~':         [ 'x', 'y', 'obj_type', 'array_name' ],
+
+# These are the object types built-in to pd-vanilla. The keys are the object
+# type name that appears after the x/y parameters (chunk-type obj x y type).
+# The values are the attributes for the object.
+VANILLA_OBJECTS = {
+    '!=':           ['rhs'],
+    '%':            ['rhs'],
+    '&&':           ['rhs'],
+    '&':            ['rhs'],
+    '*':            ['rhs'],
+    '*~':           ['rhs'],
+    '+':            ['rhs'],
+    '+~':           ['rhs'],
+    '-':            ['rhs'],
+    '-~':           ['rhs'],
+    '/':            ['rhs'],
+    '/~':           ['rhs'],
+    '<':            ['rhs'],
+    '<<':           ['rhs'],
+    '<=':           ['rhs'],
+    '==':           ['rhs'],
+    '>':            ['rhs'],
+    '>=':           ['rhs'],
+    '>>':           ['rhs'],
+    '|':            ['rhs'],
+    '||':           ['rhs'],
+    'abs':          [],
+    'abs~':         [],
+    'adc~':         ['inputs'],
+    'append':       ['template_name', 'fields'],
+    'arraysize':    ['array_name'],
+    'atan':         [],
+    'atan2':        [],
+    'bag':          [],
+    'bang':         [],
+    'bang~':        [],
+    'bendin':       ['channel'],
+    'bendout':      ['channel'],
+    'biquad~':      ['coeffs'],
+    'block~':       ['size', 'overlap', 'resampling'],
+    'bng':          ['size', 'hold', 'interrupt', 'init',
+                     'send', 'receive', 'label', 'label_x', 'label_y', 'font',
+                     'font_size', 'bg_color', 'fg_color', 'label_color'],
+    'bp~':          ['freq', 'q'],
+    'catch~':       ['bus_name'],
+    'change':       ['init'],
+    'clip':         ['lower', 'upper'],
+    'clip~':        ['lower', 'upper'],
+    'closebang':    [],
+    'cnv':          ['size', 'width', 'height', 'send',
+                     'receive', 'label', 'label_x', 'label_y', 'font',
+                     'font_size', 'bg_color', 'label_color', 'reserved'],
+    'cos':          [],
+    'cos~':         [],
+    'cpole~':       ['re', 'im'],
+    'cputime':      [],
+    'ctlin':        ['controller', 'channel'],
+    'ctlout':       ['controller', 'channel'],
+    'czero_rev~':   ['re', 'im'],
+    'czero~':       ['re', 'im'],
+    'dac~':         ['outputs'],
+    'dbtopow':      [],
+    'dbtopow~':     [],
+    'dbtorms':      [],
+    'dbtorms~':     [],
+    'delay':        ['ms'],
+    'delread~':     ['buf', 'ms'],
+    'delwrite~':    ['buf', 'ms'],
+    'div':          ['rhs'],
+    'dmstodb':      [],
+    'drawcurve':    [],
+    'drawnumber':   [],
+    'drawpolygon':  [],
+    'drawsymbol':   [],
+    'drunk':        ['upper', 'step'],
+    'element':      [],
+    'env~':         ['window', 'period'],
+    'exp':          [],
+    'expr':         ['expr'],
+    'expr~':        ['expr'],
+    'exp~':         ['base'],
+    'fft~':         [],
+    'filledcurve':  [],
+    'filledpolygon': [],
+    'float':        ['init'],
+    'framp~':       [],
+    'ftom':         [],
+    'ftom~':        [],
+    'get':          [],
+    'getsize':      [],
+    'hip~':         ['freq'],
+    'hradio':       ['size', 'new_old', 'init', 'number',
+                     'send', 'receive', 'label', 'label_x', 'label_y', 'font',
+                     'font_size', 'bg_color', 'fg_color', 'label_color',
+                     'default_value'],
+    'hslider':      ['width', 'height', 'bottom', 'top',
+                     'log', 'init', 'send', 'receive', 'label', 'label_x',
+                     'label_y', 'font', 'font_size', 'bg_color', 'fg_color',
+                     'label_color', 'default_value', 'steady_on_click'],
+    'ifft~':        [],
+    'import':       ['name'],
+    'initbang':     [],
+    'inlet':        ['name'],
+    'inlet~':       ['name'],
+    'int':          ['init'],
+    'key':          [],
+    'keyname':      [],
+    'keyup':        [],
+    'line':         ['init', 'grain_rate'],
+    'line~':        [],
+    'list':         ['init'],
+    'loadbang':     [],
+    'log':          [],
+    'log~':         ['base'],
+    'lop~':         ['freq'],
+    'makefilename': ['format'],
+    'makenote':     ['velocity', 'duration'],
+    'makesymbol':   ['format'],
+    'max':          [],
+    'max~':         [],
+    'metro':        ['ms'],
+    'midiin':       [],
+    'midiout':      [],
+    'min':          [],
+    'min~':         [],
+    'mod':          ['value'],
+    'moses':        ['value'],
+    'mtof':         [],
+    'mtof~':        [],
+    'namecanvas':   [],
+    'nbx':          ['size', 'height', 'min', 'max', 'log',
+                     'init', 'send', 'receive', 'label', 'label_x', 'label_y',
+                     'font', 'font_size', 'bg_color', 'fg_color',
+                     'label_color', 'log_height'],
+    'netreceive':   ['port_num', 'tcp_udp'],
+    'netsend':      ['tcp_udp'],
+    'noise~':       [],
+    'notein':       ['channel'],
+    'noteout':      ['channel'],
+    'openpanel':    [],
+    'osc~':         ['freq'],
+    'outlet':       ['name'],
+    'outlet~':      ['name'],
+    'pack':         ['format'],
+    'pgmin':        ['channel'],
+    'pgmout':       ['channel'],
+    'phasor~':      ['freq'],
+    'pipe-1':       ['data_type', 'delay'],
+    'pipe-2':       ['data_type', 'delay'],
+    'plot':         [],
+    'pointer':      [],
+    'poly':         ['num_voices', 'steal_voices'],
+    'polytouchin':  ['channel'],
+    'polytouchout': ['channel'],
+    'pow':          ['value'],
+    'powtodb':      [],
+    'pow~':         [],
+    'print':        ['prefix'],
+    'print~':       ['prefix'],
+    'q8_rsqrt~':    [],
+    'q8_sqrt~':     [],
+    'qlist':        [],
+    'random':       ['max'],
+    'readsf~':      ['num_channels', 'buf_size'],
+    'realtime':     [],
+    'receive':      ['type', 'src',],
+    'receive~':     ['type', 'src',],
+    'rfft~':        [],
+    'rifft~':       [],
+    'rmstodb':      [],
+    'rmstodb~':     [],
+    'route':        ['format'],
+    'rpole~':       ['re'],
+    'rsqrt~':       [],
+    'rzero_rev~':   ['re'],
+    'rzero~':       ['re'],
+    'samphold~':    [],
+    'samplerate~':  [],
+    'savepanel':    [],
+    'select':       [],
+    'send':         ['type', 'dest',],
+    'send~':        ['type', 'dest',],
+    'serial':       [],
+    'set':          [],
+    'setsize':      [],
+    'sig~':         ['init'],
+    'sin':          [],
+    'snapshot~':    ['ms'],
+    'soundfiler':   [],
+    'spigot':       ['init'],
+    'sqrt':         [],
+    'sqrt~':        [],
+    'stripnote':    [],
+    'struct':       [],
+    'sublist':      ['template_name', 'field'],
+    'swap':         [],
+    'switch~':      [],
+    'symbol':       ['init'],
+    'sysexin':      [],
+    'table':        ['name', 'size'],
+    'tabosc4~':     ['table'],
+    'tabplay~':     ['table'],
+    'tabread':      ['table'],
+    'tabread4':     ['table'],
+    'tabread4~':    ['table'],
+    'tabread~':     ['table'],
+    'tabreceive~':  ['table'],
+    'tabsend~':     ['array_name'],
+    'tabwrite':     ['table'],
+    'tabwrite~':    ['table'],
+    'tan':          [],
+    'textfile':     [],
+    'threshold~':   ['val', 'deb_time', 'rest_time'],
+    'throw~':       ['name'],
+    'timer':        [],
+    'toggle':       ['size', 'init', 'send', 'receive',
+                     'label', 'label_x', 'label_y', 'font', 'font_size',
+                     'bg_color', 'fg_color', 'label_color', 'init_value',
+                     'default_value'],
+    'touchin':      ['channel'],
+    'touchout':     ['channel'],
+    'trigger':      ['format'],
+    'unpack':       ['format'],
+    'until':        [],
+    'value':        [],
+    'vcf~':         ['q'],
+    'vd~':          ['buf'],
+    'vline~':       [],
+    'vradio':       ['size', 'new_old', 'init', 'number',
+                     'send', 'receive', 'label', 'label_x', 'label_y', 'font',
+                     'font_size', 'bg_color', 'fg_color', 'label_color',
+                     'default_value'],
+    'vslider':      ['width', 'height', 'bottom', 'top',
+                     'log', 'init', 'send', 'receive', 'label', 'label_x',
+                     'label_y', 'font', 'font_size', 'bg_color', 'fg_color',
+                     'label_color', 'default_value', 'steady_on_click'],
+    'vsnapshot~':   [],
+    'vu':           ['width', 'height', 'receive', 'label',
+                     'label_x', 'label_y', 'font', 'font_size', 'bg_color',
+                     'label_color', 'scale', 'reserved'],
+    'wrap~':        [],
+    'writesf~':     [],
     }
 
-# Object Aliases
-aliases = [ ('s', 'send'), ('s~', 'send~'),
-            ('r', 'receive'), ('r~', 'receive~'),
-            ('b', 'bang'), ('del', 'delay'),
-            ('f', 'float'), ('i', 'int'),
-            ('t', 'trigger'), ('sel', 'select'),
-            ('v', 'value') ]
+# Aliases
+aliases = [('vsl', 'vslider'), ('hsl', 'hslider'), ('tgl', 'toggle'),
+           ('hdl', 'hradio'),  ('vdl', 'vradio'),  ('v', 'value'),
+           ('s', 'send'),      ('s~', 'send~'),
+           ('r', 'receive'),   ('r~', 'receive~'),
+           ('b', 'bang'),      ('del', 'delay'),
+           ('f', 'float'),     ('i', 'int'),
+           ('t', 'trigger'),   ('sel', 'select')]
 
 # add new dict keys for the aliases, pointing to existing values
-OBJECT_DEFS.update([(a[0], OBJECT_DEFS[a[1]]) for a in aliases])
+VANILLA_OBJECTS.update([(a[0], VANILLA_OBJECTS[a[1]]) for a in aliases])
 
+# We need these every time we see an 'obj', so save them here...
+OBJ_ATTRS = VANILLA_ELEMENTS['obj']
+OBJ_NUM_ATTRS = len(OBJ_ATTRS)
+TYPE_INDEX = 2
 
-VANILLA_DEFS = {
-    'abs~':      [ 'x', 'y', 'obj_type' ],
+def is_num_or_var(text):
+    # Return known if the object is just a number or dollar-arg,
+    # otherwise it's an unknown abstraction.
+    try:
+        if len(text) > 2 and text[:2] == '\$':
+            return True
+        else:
+            float(text)
+            return True
+    except ValueError, ex:
+        return False
 
-    'bng':       [ 'x', 'y', 'obj_type', 'size', 'hold', 'interrupt', 'init',
-                   'send', 'receive', 'label', 'label_x', 'label_y', 'font',
-                   'font_size', 'bg_color', 'fg_color', 'label_color' ],
+def make_dict(attrs, params):
+    kv = dict(zip(attrs, params))
 
-    'clip~':     [ 'x', 'y', 'obj_type', 'lower', 'upper' ],
+    len_params = len(params)
+    len_attrs = len(attrs)
+    if len_params < len_attrs:
+        # If we don't have enough parameters set the remaining attributes to
+        # None
+        kv.update([(k, None) for k in attrs[len_params:]])
+        extra_params = []
+    else:
+        # Save the additional parameters that we don't have attributes for
+        extra_params = params[len_attrs:]
 
-    'cnv':       [ 'x', 'y', 'obj_type', 'size', 'width', 'height', 'send',
-                   'receive', 'label', 'label_x', 'label_y', 'font',
-                   'font_size', 'bg_color', 'label_color', 'reserved' ],
-
-    'dbtopow~':  [ 'x', 'y', 'obj_type' ],
-    'dbtorms~':  [ 'x', 'y', 'obj_type' ],
-    'exp~':      [ 'x', 'y', 'obj_type', 'log_base' ],
-    'ftom~':     [ 'x', 'y', 'obj_type' ],
-
-    'hradio':    [ 'x', 'y', 'obj_type', 'size', 'new_old', 'init', 'number',
-                   'send', 'receive', 'label', 'label_x', 'label_y', 'font',
-                   'font_size', 'bg_color', 'fg_color', 'label_color',
-                   'default_value' ],
-
-    'hslider':   [ 'x', 'y', 'obj_type', 'width', 'height', 'bottom', 'top',
-                   'log', 'init', 'send', 'receive', 'label', 'label_x',
-                   'label_y', 'font', 'font_size', 'bg_color', 'fg_color',
-                   'label_color', 'default_value', 'steady_on_click' ],
-
-    'key':       [ 'x', 'y', 'obj_type' ],
-    'keyname':   [ 'x', 'y', 'obj_type' ],
-    'keyup':     [ 'x', 'y', 'obj_type' ],
-    'list':      [ 'x', 'y', 'obj_type', 'params' ],
-    'log~':      [ 'x', 'y', 'obj_type', 'log_base' ],
-    'mtof~':     [ 'x', 'y', 'obj_type' ],
-
-    'nbx':       [ 'x', 'y', 'obj_type', 'size', 'height', 'min', 'max', 'log',
-                   'init', 'send', 'receive', 'label', 'label_x', 'label_y',
-                   'font', 'font_size', 'bg_color', 'fg_color', 'label_color',
-                   'log_height' ],
-
-    'openpanel': [ 'x', 'y', 'obj_type' ],
-    'powtodb~':  [ 'x', 'y', 'obj_type' ],
-    'pow~':      [ 'x', 'y', 'obj_type' ],
-    'print':     [ 'x', 'y', 'obj_type', 'params' ],
-    'print~':    [ 'x', 'y', 'obj_type' ],
-    'qlist':     [ 'x', 'y', 'obj_type' ],
-    'rmstodb~':  [ 'x', 'y', 'obj_type' ],
-    'rsqrt~':    [ 'x', 'y', 'obj_type' ],
-    'q8_rsqrt~': [ 'x', 'y', 'obj_type' ],
-    'q8_sqrt~':  [ 'x', 'y', 'obj_type' ],
-    'savepanel': [ 'x', 'y', 'obj_type' ],
-    'sqrt~':     [ 'x', 'y', 'obj_type' ],
-    'textfile':  [ 'x', 'y', 'obj_type' ],
-    'toggle':    [ 'x', 'y', 'obj_type', 'size', 'init', 'send', 'receive',
-                   'label', 'label_x', 'label_y', 'font', 'font_size',
-                   'bg_color', 'fg_color', 'label_color', 'init_value',
-                   'default_value' ],
-    'vradio':    [ 'x', 'y', 'obj_type', 'size', 'new_old', 'init', 'number',
-                   'send', 'receive', 'label', 'label_x', 'label_y', 'font',
-                   'font_size', 'bg_color', 'fg_color', 'label_color',
-                   'default_value' ],
-    'vslider':   [ 'x', 'y', 'obj_type', 'width', 'height', 'bottom', 'top',
-                   'log', 'init', 'send', 'receive', 'label', 'label_x',
-                   'label_y', 'font', 'font_size', 'bg_color', 'fg_color',
-                   'label_color', 'default_value', 'steady_on_click' ],
-    'vu':        [ 'x', 'y', 'obj_type', 'width', 'height', 'receive',
-                   'label', 'label_x', 'label_y', 'font', 'font_size',
-                   'bg_color', 'label_color', 'scale', 'reserved' ],
-    'wrap~':     [ 'x', 'y', 'obj_type' ]
-    }
-
-
-# Vanilla Aliases
-aliases = [ ('vsl', 'vslider'), ('hsl', 'hslider'), ('tgl', 'toggle'),
-            ('hdl', 'hradio'), ('vdl', 'vradio') ]
-
-# add new dict keys for the aliases, pointing to existing values
-VANILLA_DEFS.update([(a[0], VANILLA_DEFS[a[1]]) for a in aliases])
-
-# For now add VANILLA_DEFS in OBJECT_DEFS.
-OBJECT_DEFS.update(VANILLA_DEFS)
-
-# Definition for array data
-array_def = [ 'start_idx', 'values' ]
+    return (kv, extra_params)
 
 
 def get(name, params):
-    """Return the element definition for the given arguments and a flag
-       indicating whether we found an appropriate definition. If not we
-       return the default minimal 'obj' definition, and False."""
+    """Returns a three valued tuple containing:
+        . a list of attribute names in the order they occur in the Pd patch
+          file format
+        . a dict of attribute names and values from "params"
+        . a list of the values from "params" not used in generating the dict.
+        . a flag indicating whether this given "name" is a known Pd object, or
+          whether "name" is likely to be another abstraction (i.e. another
+          patch).
 
-    if name == 'obj':
-        lenp = len(params)
-        if lenp == 3 and params[2].isdigit():
-            return (ELEMENT_DEFS['obj'], True)
-        elif lenp >= 3:
-            defn = OBJECT_DEFS.get(params[2])
-            if defn:
-                return (defn, True)
-            else:
-                # Return known if the object is just a number or dollar-arg,
-                # otherwise it's an unknown abstraction.
-                try:
-                    sym = params[2]
-                    if len(sym) > 2 and sym[:2] == '\$':
-                        sym = sym[2:]
-                        known = True
-                    else:
-                        float(sym)
-                        known = True
-                except ValueError, ex:
-                    known = False
-                return (ELEMENT_DEFS['obj'], known)
+       "name" is used to lookup a list of attribute names defined for each
+       Pd element/object.  The dict returned uses the attributes names as
+       as keys, and the corresponding value from the given "params" as the
+       value for each key.
+
+       Attribute values are set to None if there are too few values in
+       "params".  When there are too many parameters the remaining values
+       are return as a list in the second argument of the returned tuple.
+
+       The final arg of the return tuple indicates whether a definition was
+       found for the given "name". If a definition is not found, the name
+       is likely to be an external abstraction.
+       """
+
+    # The PD line format is quite inconsistent, so we have to deal with a few
+    # special cases here...
+    len_params = len(params)
+
+    # Each of these cases attempt to get a list of attribute names for the
+    # "name" passed in. The attribute names and the values from "params" are
+    # put into a dictionary and returned to the caller.
+    # NOTES:
+    # - This code is Python 2.6 compatible, so I haven't used the new
+    #   collections.OrderedDict.
+    # - I've decided against implementing an 2.6 compatible ordered-dict, as
+    #   this dict will be exposed to uses of PyPd, and I'd be concerned about
+    #   any incompatible edge cases where the custom imlementation may differ
+    #   from what is expected of a standard dict.
+
+    if name == 'canvas':
+        if len_params == 5:
+            name = 'canvas-5'
         else:
-            return (ELEMENT_DEFS['obj'], True)
+            name = 'canvas-6'
+
+        attrs = VANILLA_ELEMENTS[name]
+        (kv, extra_params) = make_dict(attrs, params)
+        return (attrs, kv, extra_params, True)
+    elif name == 'obj':
+        # There are a few different 'obj' cases to handle here...
+
+        # All 'obj' should start with x, y and type.
+        if len_params >= OBJ_NUM_ATTRS:
+            attrs = VANILLA_OBJECTS.get(params[TYPE_INDEX])
+            if attrs:
+                known = True
+            else:
+                # No definition for this object type, use the minimal 'obj'
+                # attributes
+                attrs = OBJ_ATTRS
+                # Since the type wasn't found, check if it's a a number or
+                # dollar-arg (a variable). If not, it's a external abstration.
+                known = is_num_or_var(params[TYPE_INDEX])
+
+            (kv, extra_params) = make_dict(attrs, params)
+
+            return (attrs, kv, extra_params, known)
+        else:
+            # Don't even have x,y,type. Save what we can and return it.
+            (kv, extra_params) = make_dict(OBJ_ATTRS, params)
+            return (OBJ_ATTRS, kv, extra_params, False)
     else:
         try:
-            return (ELEMENT_DEFS[name], True)
+            attrs = VANILLA_ELEMENTS[name]
         except KeyError, ex:
             # We may encounter elements which this code doesn't know about.
-            # In this case we add a simple definition to ELEMENT_DEFS.
+            # In this case we add an empty definition.
             # - Could just use a defaultdict here and omit the warning.
             #   Is there something better to do here?
             print 'Warning: No built-in definition for %s.' % name
-            ELEMENT_DEFS[name] = [ 'params' ]
-            return (ELEMENT_DEFS[name], True)
+            VANILLA_ELEMENTS[name] = []
+            attrs = []
+
+        (kv, extra_params) = make_dict(attrs, params)
+        return (attrs, kv, extra_params, True)

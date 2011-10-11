@@ -17,7 +17,7 @@ __author__ = "Louis A. Dunne"
 __copyright__ = "Copyright 2011, Louis A. Dunne"
 __credits__ = ["Louis A. Dunne"]
 __license__ = "GPL"
-__version__ = "0.1"
+__version__ = "0.2"
 __maintainer__ = "Louis A. Dunne"
 __status__ = "Alpha"
 
@@ -26,30 +26,18 @@ NCHUNK = '#N'
 CCHUNK = '#C'
 ACHUNK = '#A'
 XCHUNK = '#X'
-CANVAS = 'canvas'
-CANVAS0 = 'canvas0'     # canvas on the first line has a different definition
+CANVAS = 'canvas'       # Since there are two different canvas definitions
+CANVAS5 = 'canvas5'     # we need to distinguish them. CANVAS5/CANVAS6 are
+CANVAS6 = 'canvas6'     # internal names only, never exposed.
 RESTORE = 'restore'
 STRUCT = 'struct'
 OBJ = 'obj'
+ARRAY_DATA = 'array-data'
 
-
-class PdParsedLine:
-    """A parsed representation of a logical Pd line. This takes a PdLine object
-       and makes the attributes available via their defined names.
-
-       Attributes can be accessed and modified like a dict:
-          obj['attribute_name'] or          (throws exception if not found)
-          obj.get('attribute_name')         (returns None if not found)
-
-        Printing the object should result in text appropriate for storing in
-        a Pd patch file."""
-
-    def __init__(self, line_text, line_num):
-        params = line_text.split(' ')
-
-        # There are various line formats to deal with. All lines start with
-        # a chunk type, and most chunk types are followed by an element
-        # type, except '#A' (array data).
+class PdObject(object):
+    def __init__(self, text, line_num):
+        self.line_num = line_num
+        params = text.split(' ')
         try:
             self.chunk = params[0]
             params = params[1:]
@@ -58,74 +46,63 @@ class PdParsedLine:
             if self.chunk == NCHUNK:
                 self.element = params[0]
                 params = params[1:]
-
-                if self.element != CANVAS and self.element != STRUCT:
-                    raise InvalidPdLine(line_text, line_num, '"%s" is not ' \
-                                        'valid with a #N chunk type. Only #N ' \
-                                        'canvas and #N struct are valid.' \
-                                        % str(self.element))
-
-                if line_num == 0:
-                    # The first canvas definition is different to all other
-                    # canvas definitions so we have to special case it.
-                    self.element = CANVAS0
-
             # "#C restore"
             elif self.chunk == CCHUNK:
                 self.element = params[0]
                 params = params[1:]
                 if self.element != RESTORE:
-                    raise InvalidPdLine(line_text, line_num, '"%s" is not ' \
-                                        'valid with a #N chunk type. Only #C ' \
-                                        'restore is valid.' % str(self.element))
-
+                    raise ValueError('Invalid chunk element combination: ' \
+                                     '"%s %s"' % (self.chunk, self.element))
             # "#A array-data"
             elif self.chunk == ACHUNK:
-                self.element = '<array-data>'
-                self.known = True
-
+                # Array data definitions don't have an element name, so we
+                # use this as a placeholder
+                self.element = ARRAY_DATA
             # "#X ..."
             elif self.chunk == XCHUNK:
+                # every other object
                 self.element = params[0]
                 params = params[1:]
-
             else:
-                raise InvalidPdLine(line_text, line_num,
-                                    'Unrecognized chunk type')
+                raise ValueError('Unrecognized chunk type: "%s"' % self.chunk)
+
         except IndexError, ex:
-            raise InvalidPdLine(line_text, line_num, ex = ex)
+            raise ValueError('Too few values to parse in "%s"' % text)
 
-        # Lookup the attributes defined for the element type. The exception
-        # is array data (#A) which doesn't have an element name.
+        (self.attr_names, self.attrs, self.extra_params, self.known) = \
+                                    pdelement.get(self.element, params)
 
-        if self.chunk == ACHUNK:
-            (self.attr_defs, self.known) = (pdelement.array_def, True)
-        else:
-            (self.attr_defs, self.known) = pdelement.get(self.element, params)
+    @staticmethod
+    def factory(lines):
+        """This is a generator which takes lines of text from a patch file
+           and assembles multiple lines into a single logical line. Each
+           line is used to create a PdObject and then yielded to the caller."""
 
-        # Make a dict (self.attrs) to break out each parameter from the Pd
-        # text line. The keys come from the attribute definition
-        # (self.attr_defs), the values are the text line.
+        (text, start_line_num) = ('', None)
 
-        self.last_list = False
-        len_defs = len(self.attr_defs)
-        len_params = len(params)
+        for line_num, line in enumerate(lines):
+            line = line.rstrip('\n')
+            if line and not line.isspace():
+                if start_line_num is None:
+                    # start a new object
+                    text = line
+                    start_line_num = line_num
+                else:
+                    # a contination line. make sure there's some space between
+                    # this and the params of the previous line
+                    if text[-1] != ' ':
+                        text += ' '
+                    text += line
 
-        if len_params > len_defs:
-            # Put extra params as a list in the last attribute
-            self.attrs = dict(zip(self.attr_defs[:-1], params[:len_defs-1]))
-            self.attrs[self.attr_defs[-1]] = params[len_defs-1:]
-            self.last_list = True
-        elif len_params < len_defs:
-            # Add attributes for the params we have
-            self.attrs = dict(zip(self.attr_defs, params))
-            # Set remaining attributes to None
-            self.attrs.update(dict([(k, None) \
-                              for k in self.attr_defs[len_params:]]))
-        else:
-            # Same number of params and attributes
-            self.attrs = dict(zip(self.attr_defs, params))
+                # The end-of-line ';' can be escaped with a preceeding '\'
+                if len(text) > 1 and text[-1] == ';' and text[-2] != '\\':
 
+                    # Now we have a full logical Pd object (drop the ";" char)
+                    yield PdObject(text[:-1], start_line_num)
+
+                    # When we come back into the generator we need start a new
+                    # object
+                    start_line_num = None
 
     def __getitem__(self, attr_name):
         """Access Pd attributes by name. Raises exception if not found."""
@@ -139,22 +116,14 @@ class PdParsedLine:
         """Returns a textual representation suitable for storing in a Pd
            patch file."""
 
-        # Get all attributes values in the order they appear in the
-        # attribute definition, excluding any values set to None.
-        if self.last_list:
-            # In this case the we had more parameters than attributes so the
-            # last attribute is already a list of values
-            vals = [self.attrs[s] \
-                        for s in self.attr_defs[:-1] if self.attrs[s]] + \
-                   [s for s in self.attrs[self.attr_defs[-1]] if s]
-        else:
-            vals = [self.attrs[s] for s in self.attr_defs if self.attrs[s]]
+        vals = [self.attrs[k] for k in self.attr_names \
+                              if self.attrs[k] is not None]
+        if self.extra_params:
+            vals += self.extra_params
 
-        # Special case the canvas on line 0 and array-data
+        # Special case for canvas and array-data
         if self.chunk == ACHUNK:
             return ' '.join([self.chunk] + vals)
-        elif self.element == CANVAS0:
-            return ' '.join([self.chunk, CANVAS] + vals)
         else:
             return ' '.join([self.chunk, self.element] + vals)
 
@@ -163,78 +132,128 @@ class PdParsedLine:
            'obj'"""
 
         if self.element == OBJ:
-            return self.attrs.get('obj_type') or self.element
+            return self.attrs.get('type') or self.element
         else:
             return self.element
 
-class PdLine(object):
-    """Abstraction for a logical line from a Pd format patch file."""
 
-    def __init__(self, line_text, line_num, obj_id):
-        (self.line_text, self.line_num, self.obj_id) = \
-                        (line_text, line_num, obj_id)
-        assert self.line_num >= 0
-        assert self.obj_id >= -1    # Top level canvas is given an ID of -1
+class PdPatchFilter(object):
+    pass
 
-        # This is the parsed object.
-        self.p = PdParsedLine(line_text, line_num)
+class PdPatch(object):
+    """This is a container type abstraction for a Pure Data patch or sub-patch.
+       These are represented by the Pd "canvas" type. All patch files start
+       with a top-level canvas declaration, and may contain further canvas
+       declarations to indicate sub-patches.
 
-    @staticmethod
-    def factory(lines):
-        """This is a generator which takes a list of lines from a Pd
-           patch file and yields each logical Pd line. It loops through
-           the lines, joining them up until the end of line marker (;\\n) is
-           hit. Also keeps track of file line numbers and object numbers and
-           supplies these to PdLine()"""
+       Objects are accessed via their object-ids, which can change if objects
+       are inserted or deleted. This is an unfortunate side-effect of the
+       Pd patch file format.
 
-        (logical_line, obj_id, parent_ids) = ('', -1, collections.deque())
+       An easier way to access specific objects is to create a PdPatchFilter
+       object to describe the desired objects, then use the select() method
+       to iterate through the selected objects."""
 
-        for line_num, line in enumerate(lines):
-            line = line.rstrip('\n')
-            if line and not line.isspace():
-                logical_line += line
-                if len(logical_line) > 1 and logical_line[-2] != '\\' and \
-                   logical_line[-1] == ';':
-                    # Now we have a full logical Pd line - make a PdLine
-                    # and return it
-                    obj = PdLine(logical_line[:-1], line_num, obj_id)
-                    element = obj.p.element
-                    yield obj
+    def __init__(self, patch_text):
+        """Create a PdPatch object from the textual description given in
+           "patch_text"."""
 
-                    # When we come back into the generator we need to figure
-                    # out the next object id, and start new logical line
-                    logical_line = ''
+        self._patch_text = patch_text
 
-                    if element == CANVAS:
-                        # Each sub-patch starts with a canvas object.  The
-                        # objects ids in each sub-patch start at zero.
-                        parent_ids.append(obj_id)
-                        obj_id = 0
-                    elif element == RESTORE:
-                        # Sub-patches finish with a restore object. Object
-                        # ids then continue where they left off before the
-                        # sub-patch.
-                        try:
-                            # TODO: There are "#C restore;" lines that don't
-                            # correspond to previous canvas declarations.
-                            # These have no name, but don't know what they're
-                            # for yet. Ignore for now.
-                            if obj.p.get('name'):
-                                obj_id = parent_ids.pop() + 1
-                        except:
-                            print str(obj)
-                            raise
-                    else:
-                        obj_id += 1
+        factory = PdObject.factory(patch_text)
+
+        self.canvas = factory.next()
+        if self.canvas.element != CANVAS:
+            # First line should be the canvas definition
+            raise InvalidPdLine(text, line_num)
+
+        # We need to store each object in a tree so that we can keep track
+        # of sub-patches
+        self._tree = pdtree.SimpleTree(self.canvas)
+
+        cur_node = self._tree
+        for obj in factory:
+            if obj.element == CANVAS:
+                branch = pdtree.SimpleTree(obj)
+                cur_node.addBranch(branch)
+                cur_node = branch
+            elif obj.element == RESTORE:
+                cur_node.add(obj)
+                cur_node = cur_node.parent
+            else:
+                cur_node.add(obj)
+
+    def __len__(self):
+        return len(self._tree)
+
+    def __getitem__(self, key):
+        """Objects within a patch are accessed using their object IDs.  IDs
+           start at zero for the first object in the patch, excluding the
+           starting canvas definition.
+
+           The first object in a sub-patch starts at ID zero again. The IDs in
+           the parent patch take up where they left off when the sub-patch
+           returns to its parent.
+
+           To locate an object in a sub-patch you must first locate the
+           canvas object for that sub-patch. See PdPatchFilter for an easier
+           way to access objects.
+
+           Slices are not supported, since in Pure Data terms a part of a patch
+           would not be a valid patch. It would not start with a canvas
+           definition and would not have correctly numbered object IDs. The
+           exception would be a slice starting at the beginning of the patch,
+           but this is not a common or useful way of accessing parts of a Pd
+           patch."""
+
+        if isinstance(key, slice):
+            raise NotImplementedError('PdPatch does not support slices')
+
+        return self._tree[i]
+
+    def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            raise NotImplementedError('PdPatch does not support slices')
+        else:
+            self._tree[i] = value
+
+        pass
+
+    def __delitem__(self, key):
+        pass
+
+    def __iter__(self):
+        return self.iter()
+
+    def __reversed__(self):
+        """There's no point in reversing a patch."""
+
+        raise NotImplementedError('PdPatch does not support reversed()')
+
+    def __contains__(self):
+        pass
 
     def __str__(self):
-        return self.line_text
+        return ';\r\n'.join(str(node.value) for node in self)
 
-class PdFile:
+    def __iter__(self):
+        return iter(self._tree)
+
+    def apply(self, fn):
+        return self._tree.apply(fn)
+
+    def insert(self, key, value):
+        pass
+
+    def select(self, obj_filter):
+        pass
+
+class PdFile(object):
     """Abstraction for a Pd format patch file."""
 
-    def _read(self, filename):
+    def __init__(self, filename):
         self.filename = filename
+
         fd = None
         try:
             # It's easier and quicker to read the whole file at one and then
@@ -246,90 +265,26 @@ class PdFile:
             # line endings. This means we'll look for lines ending in ';\n'
             # to mark the end of logical Pd lines.
             fd = open(self.filename, 'U')
-            lines = fd.readlines()
+            self.lines = fd.readlines()
         finally:
             if fd:
                 fd.close()
             # let exceptions propagate up
-        return lines
 
-
-    def __init__(self, filename):
-        # read in the whole file
-        lines = self._read(filename)
-
-        # PdLine defines a generator which takes the lines from the patch
-        # file and yields each logical Pd line. Each logical line defines
-        # a Pd element/object, and may span several physical text lines.
-        line_factory = PdLine.factory(lines)
-
-        # first line is supposed to be the top level canvas
-        self.canvas = line_factory.next()
-
-        # Store the remaining lines in a list
-        self.lines = [line for line in line_factory]
-
-        # _tree will be populated when touched - it will hold a tree
-        # representation of the patch and each of its sub-patches.
-        self._tree = None
-
-    def get_tree_property(self):
-        if not self._tree:
-            self._parse()
-        return self._tree
-    tree = property(get_tree_property)
-
-    def _parse(self):
-        self._tree = pdtree.Tree(self.canvas)
-        tree_stack = [self._tree]
-
-        try:
-            for line in self.lines:
-                # Add a branch to the tree when we hit a sub-patch (canvas)
-                if line.p.element == CANVAS:
-                    t = tree_stack[-1].addBranch(line)
-                    tree_stack.append(t)
-                # Move back to the parent branch when we return from the
-                # sub-patch (a restore with a name)
-                elif line.p.element == RESTORE and line.p.get('name'):
-                    tree_stack[-1].addLeaf(line)
-                    tree_stack.pop()
-                # Otherwise all other objects are leaf nodes
-                else:
-                    tree_stack[-1].addLeaf(line)
-        except IndexError:
-            print 'Error parsing sub-patch (canvas/restore) around line ' \
-                  '%d' % line.line_num
-            print '\t"%s"\n' % str(line)
-            raise
+        # Parse all lines creating a patch object.
+        self.patch = PdPatch(self.lines)
 
     def __str__(self):
-        return self.filename
+        return str(self.patch)
 
-##### TESTS #####
-
-def testPdFile1(filename):
-    f = PdFile(filename)
-    for line in f.lines:
-        if str(line) != str(line.p):
-            # The lines may differ by whitespace only. Extract all words and
-            # compare separately.
-            same = all([oword == pword \
-                        for (oword, pword) in \
-                        zip(str(line).split(), str(line.p).split())])
-            if not same:
-                raise pdtest.Unexpected(str(line.line_num),
-                                        str(line), str(line.p))
-
-@pdtest.passfail
-def testPdFile(args):
-    fnames = args or ['test1.pd']
-    for fname in fnames:
-        print fname
-        testPdFile1(fname)
-
-def test():
-    testPdFile(sys.argv[1:])
 
 if __name__ == '__main__':
-    test()
+    if len(sys.argv) == 1:
+        f = PdFile('test1.pd')
+    else:
+        f = PdFile(sys.argv[1])
+
+    for (node, obj_id, level) in f.patch:
+        print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
+        #print i.value
+        #print '%d   %s' % (i.value.known, i.value)

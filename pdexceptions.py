@@ -24,5 +24,5 @@ class InvalidPdLine(PdException):
                  ex = None):
         super(InvalidPdLine, self).__init__('%s:%d "%s"' % \
                                             (err_text, line_num, \
-                                            line_line.text))
+                                            line_text))
         (self.line_text, self.line_num, self.ex) = (line_text, line_num, ex)
