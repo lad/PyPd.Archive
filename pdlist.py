@@ -15,31 +15,6 @@ import pdextra
 import pdplatform
 import pdconfig
 
-class OutputTree(object):
-    """Callable class for a simple tree style output."""
-
-    def __init__(self, tabstop = 2):
-        self.ts = tabstop
-        self.reset()
-
-    def reset(self):
-        self.tab = 0
-        self.output = []
-
-    def __call__(self, pd_line):
-        if pd_line.obj_id == 0:
-            self.tab += self.ts
-        self.output.append('%-6s%s%s' % (str(pd_line.obj_id),
-                                         ' ' * self.tab, pd_line.p.name()))
-        if pd_line.p.element == 'restore':
-            self.tab -= self.ts
-
-    def __str__(self):
-        return '\n'.join(self.output)
-
-    def empty(self):
-        return not self.output
-
 class OutputAbstractions(object):
     """Callable class which generates a list of the abstractions found in
        the patch file and stores them in different ways."""
@@ -134,16 +109,12 @@ Options:
 """ % (os.path.basename(sys.argv[0]), pdplatform.pref_file)
     sys.exit(1)
 
+(EXTRA, MISSING, TREE, DEPEND) = range(1, 5)
 
-##### MAIN #####
-
-
-if __name__ == '__main__':
-
-    # First get options and args...
+def get_args(argv):
 
     try:
-        options, args = getopt.getopt(sys.argv[1:],
+        options, args = getopt.getopt(argv,
                 'emtdi:p:nhx', ['extra', 'missing', 'tree', 'depend',
                                 'include=', 'pd=', 'nonames', 'help',
                                 'examples'])
@@ -152,7 +123,6 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
 
-    (EXTRA, MISSING, TREE, DEPEND) = range(1, 5)
     (action, include_dirs, pd_root, print_names) = (None, [], None, True)
 
     for opt,arg in options:
@@ -180,15 +150,27 @@ if __name__ == '__main__':
             print_names = False
         elif opt in ('-h', '--help'):
             usage()
-            sys.exit(0)
         elif opt in ('-x', '--examples'):
             examples()
 
     if not args or not action:
         usage()
 
+    return (action, args, include_dirs, pd_root, print_names)
+
+
+##### MAIN #####
+
+
+if __name__ == '__main__':
+
+    # First get options and args...
+
+    (action, args, include_dirs, pd_root, print_names) = get_args(sys.argv[1:])
+
     # Pick an output class based on the options given
 
+    """
     if action in (EXTRA, DEPEND, MISSING):
         # Add the directory containing the patch file to the search dirs
         out = OutputAbstractions(include_dirs, action, pd_root = pd_root)
@@ -197,6 +179,7 @@ if __name__ == '__main__':
     else:
         usage()
         sys.exit(1)
+    """
 
     # Run through each file. The output object gets applied to each node
     # in a tree of objects parsed from each file.
@@ -205,15 +188,19 @@ if __name__ == '__main__':
         if print_names and len(args) == 1:
             print_names = False
         for fname in args:
-            out.reset()
             if print_names:
                 print '\n%s' % fname
 
             f = pd.PdFile(fname)
-            f.tree.applyDF(out)
+            if action == TREE:
+                for (node, obj_id, level) in f.patch:
+                    print '%s%s' % (' ' * (level * 4), node.value.name())
 
-            if not out.empty():
-                print out
+
+            #f.tree.applyDF(out)
+
+            #if not out.empty():
+                #print out
     except Exception, ex:
         print 'File:', fname
         traceback.print_exc(ex)
