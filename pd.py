@@ -4,8 +4,7 @@
 
     PdFile: opens and read Pd patch files
     PdPatch: parsed representation of a Pd patch file
-    PdObject: parsed representation of each Pd element/object
-    PdPatchFilter: ... """
+    PdObject: parsed representation of each Pd element/object"""
 
 import sys
 import collections
@@ -34,6 +33,7 @@ RESTORE = 'restore'
 STRUCT = 'struct'
 OBJ = 'obj'
 ARRAY_DATA = 'array-data'
+
 
 class PdObject(object):
     def __init__(self, text, line_num):
@@ -116,6 +116,26 @@ class PdObject(object):
         else:
             return self.attrs[attr_name]
 
+    def __setitem__(self, attr_name, attr_value):
+        """First draft of a simple setitem.  We may need a lot of contraints
+           here to prevent the patch becoming invalid.
+
+           May also allow the constaints to be relaxed, perhaps in a
+           transaction for bundling up a bunch of changes that would otherwise
+           result in an invalid patch during the intermediate changes, but
+           would be valid once all changes are complete."""
+
+        if attr_name == 'element':
+            self.element = attr_value
+        elif attr_name == 'chunk':
+            self.chunk = attr_value
+        elif attr_name == 'known':
+            raise AttributeError('Cannot set PdObject.known. It is a ' \
+                                 'read-only value')
+        else:
+            self.attrs[attr_name] = attr_value
+        return self
+
     def get(self, attr_name):
         """Access Pd attributes by name. Returns None if not found."""
         if attr_name == 'element':
@@ -154,23 +174,6 @@ class PdObject(object):
             return self.element
 
 
-class PdPatchFilter(object):
-    """Matches all key=value entries in "kwargs" when match() is called with
-       a PdObject instance. All values must match, no support for other
-       logical operators just yet."""
-
-    def __init__(self, **kwargs):
-        self.matches = kwargs
-
-    def match(self, pdo):
-        """Returns true/false if the PdObject instance matches the key=value
-           entries passed to the constructor."""
-        for k,v in self.matches.items():
-            if pdo.get(k) != v:
-                return False
-
-        return True
-
 class PdPatch(object):
     """This is a container type abstraction for a Pure Data patch or sub-patch.
        These are represented by the Pd "canvas" type. All patch files start
@@ -179,11 +182,15 @@ class PdPatch(object):
 
        Objects are accessed via their object-ids, which can change if objects
        are inserted or deleted. This is an unfortunate side-effect of the
-       Pd patch file format.
+       Pd patch file format. An additional problem is that object-ids are
+       only unique within their own patch or sub-patch. Since all sub-patches
+       restart object-ids at zero, there will be many objects with the same
+       Pd object-id.
 
-       An easier way to access specific objects is to create a PdPatchFilter
-       object to describe the desired objects, then use the select() method
-       to iterate through the selected objects."""
+       An easier way to access specific objects is use the select() method
+       specifying the attributes of the objects to match. Alternatively the
+       filter built-in can be used with any callable to select objects.  See
+       example in the documentation for the select() method."""
 
     def __init__(self, patch_text):
         """Create a PdPatch object from the textual description given in
@@ -227,8 +234,8 @@ class PdPatch(object):
            returns to its parent.
 
            To locate an object in a sub-patch you must first locate the
-           canvas object for that sub-patch. See PdPatchFilter for an easier
-           way to access objects.
+           canvas object for that sub-patch. See select() for an easier way to
+           access objects.
 
            Slices are not supported, since in Pure Data terms a part of a patch
            would not be a valid patch. It would not start with a canvas
@@ -259,8 +266,12 @@ class PdPatch(object):
 
         raise NotImplementedError('PdPatch does not support reversed()')
 
-    def __contains__(self):
-        pass
+    def __contains__(self, obj):
+        for (node, obj_id, level) in self._tree:
+            if node.value == obj:
+                return True
+
+        return False
 
     def __str__(self):
         return ';\r\n'.join(str(node.value) for node in self)
@@ -272,18 +283,23 @@ class PdPatch(object):
         return self._tree.apply(fn)
 
     def add(self, key, value):
-        pass
+        raise NotImplementedError('Not implemented yet')
 
     def insert(self, i, key, value):
-        pass
+        raise NotImplementedError('Not implemented yet')
 
-    def select(self, obj_filter):
-        matched = []
+    def select(self, **kwargs):
+        selected = []
         for (node, obj_id, level) in self._tree:
-            if obj_filter.match(node.value):
-                matched.append((node, obj_id))
+            match = True
+            for key, value in kwargs.items():
+                if node.value.get(key) != value:
+                    match = False
+                    break
+            if match:
+                selected.append((node, obj_id, level))
 
-        return matched
+        return selected
 
 class PdFile(object):
     """Abstraction for a Pd format patch file."""
@@ -315,6 +331,7 @@ class PdFile(object):
         return str(self.patch)
 
 
+
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         f = PdFile('test1.pd')
@@ -324,10 +341,28 @@ if __name__ == '__main__':
     #for (node, obj_id, level) in f.patch:
         #print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
 
-    kw={'known': False}
-    filt = PdPatchFilter(**kw)
+    def fn(node_tuple):
+        (node, obj_id, level) = node_tuple
+        y = node.value.get('y')
+        if node.value.element == 'text' and y != None and y == '91' and \
+            node.parent and node.parent.value.element == 'canvas' and \
+            node.parent.value.get('name') == 'player':
+            return True
+        else:
+            return False
 
-    for (m,i) in f.patch.select(filt):
+    for (node, oid, level) in filter(fn, f.patch):
+        node.value['y'] = '92'
+
+    for (node, oid, level) in filter(fn, f.patch):
+        print str(node.value)
+    #vsls = [str(n.value) for (n,o,l) in filter(fn, f.patch)]
+    #print '\n'.join(vsls)
+
+    """
+    #for (m,i) in f.patch.filter(filt):
+    #for (m, i, level) in filter(filt, f.patch):
+    for (m,i) in f.patch.select(element = 'text'):
         parents = []
         textobj = str(m.value)
         while m.parent:
@@ -339,3 +374,5 @@ if __name__ == '__main__':
             print '%s%s' % (' ' * ts, str(p.name()))
             ts += 4
         print '%s%-4d %s\n' % (' ' * ts, i, textobj)
+    """
+
