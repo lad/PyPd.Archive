@@ -9,6 +9,9 @@ PyPD Version 0.2 Alpha
 - More complex matching can be done by using the filter builtin, and providing
   a callable in the normal way. The callable is invoked with the node, object
   id and level in the tree, and can match in whatever way is required.
+- Moved object id generation from SimpleTree to PdPatch as this needs to
+  understand Pd objects, and SimpleTree has no other need to do that. Makes
+  more sense to do this in PdPatch anyway.
 
 11/10/11
 - Work in progress, almost complete
