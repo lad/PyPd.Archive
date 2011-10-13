@@ -3,12 +3,18 @@ Object IDs
 ----------
 Probably need to be implicit, existing an indices into lists of objects. Better
 than renumbering when inserting/deleting.
--> Done, these are now implicit
+- Done, these are now implicit
 
 Connect objects are troublesome as they refer to object ids. Inserting/deletion
 will require modifying the connect objects. Can't see any way around this. In
 fact it's one of the features the project can offer. It's worth having this
 baked in so you don't have to think of it when writing quick scripts.
+
+- Assign bi-directional references from connect objects to the sources and
+  destinations.
+- The object-ids in the connection object can then be ignored on insert/delete.
+- The source and destination object-ids can be regenerated when re-writing
+  the patch.
 
 
 Parse Recursive Abstractions
