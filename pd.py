@@ -30,6 +30,7 @@ CANVAS = 'canvas'       # Since there are two different canvas definitions
 CANVAS5 = 'canvas5'     # we need to distinguish them. CANVAS5/CANVAS6 are
 CANVAS6 = 'canvas6'     # internal names only, never exposed.
 RESTORE = 'restore'
+CONNECT = 'connect'
 STRUCT = 'struct'
 OBJ = 'obj'
 ARRAY_DATA = 'array-data'
@@ -200,9 +201,9 @@ class PdPatch(object):
 
         factory = PdObject.factory(patch_text)
 
+        # First line should be the canvas definition
         self.canvas = factory.next()
         if self.canvas.element != CANVAS:
-            # First line should be the canvas definition
             raise InvalidPdLine(text, line_num)
 
         # We need to store each object in a tree so that we can keep track
@@ -258,9 +259,6 @@ class PdPatch(object):
     def __delitem__(self, key):
         pass
 
-    def __iter__(self):
-        return self.iter()
-
     def __reversed__(self):
         """There's no point in reversing a patch."""
 
@@ -277,7 +275,39 @@ class PdPatch(object):
         return ';\r\n'.join(str(node.value) for node in self)
 
     def __iter__(self):
-        return iter(self._tree)
+        # The object ids must be generated dynamically, as they change when
+        # the tree is modified. The root node (a canvas object) and connect
+        # object are given the id of -1 as they don't actually have ids in Pd
+        # patches.
+        obj_id = -1
+
+        it = iter(self._tree)
+        (node, level) = it.next()
+        yield (node, obj_id, level)
+
+        # Need to keep track of the object id as we move up and down levels
+        # in the tree
+        obj_id_stack = collections.deque()
+        last_level = 1
+
+        for (node, level) in it:
+            if node.value.element == CONNECT:
+                # Connect objects have no valid id
+                yield (node, -1, level)
+            else:
+                # Work out the object-id
+                if level == last_level:
+                    obj_id += 1
+                elif level == (last_level - 1):
+                    # returning from sub-patch
+                    obj_id = obj_id_stack.pop() + 1
+                else:
+                    # entering sub-patch
+                    obj_id_stack.append(obj_id)
+                    obj_id = 0
+
+                last_level = level
+                yield (node, obj_id, level)
 
     def apply(self, fn):
         return self._tree.apply(fn)
@@ -340,22 +370,22 @@ if __name__ == '__main__':
 
     #for (node, obj_id, level) in f.patch:
         #print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
+            #node.parent and node.parent.value.element == 'canvas' and \
+            #node.parent.value.get('name') == 'player':
 
     def fn(node_tuple):
         (node, obj_id, level) = node_tuple
         y = node.value.get('y')
-        if node.value.element == 'text' and y != None and y == '91' and \
-            node.parent and node.parent.value.element == 'canvas' and \
-            node.parent.value.get('name') == 'player':
+        if node.value.element == 'text':
             return True
         else:
             return False
 
-    for (node, oid, level) in filter(fn, f.patch):
-        node.value['y'] = '92'
+    for (node, oid, level) in f.patch:
+        print '%d%s%s' % (oid, ' ' * (level * 4), str(node.value))
 
-    for (node, oid, level) in filter(fn, f.patch):
-        print str(node.value)
+    #for (node, oid, level) in filter(fn, f.patch):
+        #print str(node.value)
     #vsls = [str(n.value) for (n,o,l) in filter(fn, f.patch)]
     #print '\n'.join(vsls)
 

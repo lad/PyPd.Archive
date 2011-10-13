@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-""" A tree data structure oriented towards storing Pd objects. """
+""" A simple tree data structure. This is oriented towards storing Pd objects
+though does not have any actual dependency on the rest of the Pd code. There's
+no need for this code to understand anything about Pd."""
 
 import collections
 import pdtest
 
 class SimpleTree(object):
-    """This simple tree abstraction dispenses with the notion of separate
-       tree and node classes and uses a single class for both. All nodes
-       in the tree are instances of Simpletree."""
+    """This tree abstraction dispenses with the notion of separate tree and
+    node classes and uses a single class for both. All nodes in the tree are
+    instances of Simpletree."""
 
     def __init__(self, value = None, parent = None):
         (self.parent, self.value, self._children) = (parent, value, [])
@@ -48,27 +50,15 @@ class SimpleTree(object):
         """Iteration is depth first as this is the only order that makes sense
            for a Pd patch. Each object is yielded in the order it appears in
            the original patch.  Each value yielded by the iterator is a tuple
-           of the node value, the object-id, and an integer indicating its
-           level in the tree."""
-
-        # The object ids must be generated dynamically, as they change when
-        # the tree is modified. The root node is given the id of -1, as Pd
-        # root objects (canvas objects) don't actually have an id in Pd
-        # parlance.
-        obj_id = -1
+           of the node value, an integer indicating its level in the tree."""
 
         # Yield the root
-        yield (self, obj_id, 0)
+        yield (self, 0)
 
         # Use a stack instead of recursion. Each tuple in the stack is a node
         # and its level in the tree.
         child_stack = collections.deque([(c, 1)  for c in \
                                          reversed(self._children)])
-        # Need to keep track of the object id as we move up and down levels
-        # in the tree
-        obj_id_stack = collections.deque()
-
-        last_level = 1
         while True:
             try:
                 (child, level) = child_stack.pop()
@@ -76,23 +66,12 @@ class SimpleTree(object):
                 # stack is empty, we're done...
                 return
 
-            # Work out the object-id
-            if level == last_level:
-                obj_id += 1
-            elif level == (last_level - 1):
-                obj_id = obj_id_stack.pop() + 1
-            else:
-                obj_id = 0
-
-            last_level = level
-
             # Yield each node
-            yield (child, obj_id, level)
+            yield (child, level)
 
             if child._children:
                 child_stack.extend([(c, level + 1) for c in \
                                     reversed(child._children)])
-                obj_id_stack.append(obj_id)
 
     def apply(self, fn):
         for (node, level) in self:
