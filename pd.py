@@ -37,7 +37,8 @@ ARRAY_DATA = 'array-data'
 
 
 class PdObject(object):
-    def __init__(self, text, line_num):
+    def __init__(self, text, line_num, includes):
+        self.text = text
         self.line_num = line_num
         params = text.split(' ')
         try:
@@ -71,11 +72,23 @@ class PdObject(object):
         except IndexError, ex:
             raise ValueError('Too few values to parse in "%s"' % text)
 
-        (self.attr_names, self.attrs, self.extra_params, self.known) = \
+        (self.attr_names, self.attrs, self.extra_params, self.vanilla) = \
                                     pdelement.get(self.element, params)
 
+        if not self.vanilla:
+            typ = self.attrs.get('type')
+            if typ and includes:
+                self.include = includes.get(typ)
+            else:
+                self.include = []
+        else:
+            self.include = []
+
+    def known(self):
+        return self.vanilla or bool(self.include)
+
     @staticmethod
-    def factory(lines):
+    def factory(lines, includes):
         """This is a generator which takes lines of text from a patch file
            and assembles multiple lines into a single logical line. Each
            line is used to create a PdObject and then yielded to the caller."""
@@ -100,7 +113,7 @@ class PdObject(object):
                 if len(text) > 1 and text[-1] == ';' and text[-2] != '\\':
 
                     # Now we have a full logical Pd object (drop the ";" char)
-                    yield PdObject(text[:-1], start_line_num)
+                    yield PdObject(text[:-1], start_line_num, includes)
 
                     # When we come back into the generator we need start a new
                     # object
@@ -112,8 +125,10 @@ class PdObject(object):
             return self.element
         elif attr_name == 'chunk':
             return self.chunk
+        elif attr_name == 'vanilla':
+            return self.vanilla
         elif attr_name == 'known':
-            return self.known
+            return self.known()
         else:
             return self.attrs[attr_name]
 
@@ -130,8 +145,8 @@ class PdObject(object):
             self.element = attr_value
         elif attr_name == 'chunk':
             self.chunk = attr_value
-        elif attr_name == 'known':
-            raise AttributeError('Cannot set PdObject.known. It is a ' \
+        elif attr_name == 'vanilla':
+            raise AttributeError('Cannot set PdObject.vanilla. It is a ' \
                                  'read-only value')
         else:
             self.attrs[attr_name] = attr_value
@@ -143,8 +158,10 @@ class PdObject(object):
             return self.element
         elif attr_name == 'chunk':
             return self.chunk
+        elif attr_name == 'vanilla':
+            return self.vanilla
         elif attr_name == 'known':
-            return self.known
+            return self.known()
         else:
             return self.attrs.get(attr_name)
 
@@ -171,6 +188,26 @@ class PdObject(object):
             return self.attrs.get('type') or self.element
         elif self.element == CANVAS:
             return 'canvas %s' % self.get('name')
+        elif self.element == RESTORE:
+            # There are a few different possible restore formats.
+            #     restore pd name;
+            #     restore pd;
+            #     restore graph;
+            #     restore;
+            name = self.get('name')
+            if name == 'pd':
+                if len(self.extra_params):
+                    val = '%s %s' % (RESTORE, str(self.extra_params[0]))
+                else:
+                    val = '%s (subpatch)' % RESTORE
+            elif name == 'graph':
+                val = '%s (graph-on-parent subpatch)' % RESTORE
+            elif name:
+                val = '%s %s' % (RESTORE, name)
+            else:
+                val = RESTORE
+
+            return val
         else:
             return self.element
 
@@ -193,18 +230,31 @@ class PdPatch(object):
        filter built-in can be used with any callable to select objects.  See
        example in the documentation for the select() method."""
 
-    def __init__(self, patch_text):
+    def __init__(self, patch_text, includes = None):
         """Create a PdPatch object from the textual description given in
            "patch_text"."""
 
-        self._patch_text = patch_text
+        self.patch_text = patch_text
+        self.includes = includes
 
-        factory = PdObject.factory(patch_text)
+        factory = PdObject.factory(patch_text, includes)
 
-        # First line should be the canvas definition
-        self.canvas = factory.next()
-        if self.canvas.element != CANVAS:
-            raise InvalidPdLine(text, line_num)
+        # First line should be a canvas or we can have one or more struct
+        # definitions then the canvas.
+        self.structs = []
+        self.canvas = None
+
+        while not self.canvas:
+            o = factory.next()
+            if o.element == CANVAS:
+                self.canvas = o
+            elif o.element == STRUCT:
+                self.structs.append(o)
+            else:
+                raise InvalidPdLine(o.text, o.line_num)
+
+        if not self.canvas or self.canvas.element != CANVAS:
+            raise PdInvalidPatch('No starting canvas definition found')
 
         # We need to store each object in a tree so that we can keep track
         # of sub-patches
@@ -213,10 +263,16 @@ class PdPatch(object):
         cur_node = self._tree
         for obj in factory:
             if obj.element == CANVAS:
+                # Add a branch when a encounter a canvas
                 branch = pdtree.SimpleTree(obj)
                 cur_node.addBranch(branch)
                 cur_node = branch
-            elif obj.element == RESTORE:
+            elif obj.element == RESTORE and obj.name() != RESTORE:
+                # Pop back up to the parent when we hit a restore object.
+                # We ignore restore objects that are called 'restore', i.e.
+                # they don't have a name. These are "#C restore;" lines
+                # which don't seem to serve any real purpose, so we ignore
+                # them
                 cur_node.add(obj)
                 cur_node = cur_node.parent
             else:
@@ -248,7 +304,7 @@ class PdPatch(object):
         if isinstance(key, slice):
             raise NotImplementedError('PdPatch does not support slices')
 
-        return self._tree[i]
+        return self._tree[key]
 
     def __setitem__(self, key, value):
         if isinstance(key, slice):
@@ -320,7 +376,7 @@ class PdPatch(object):
 
     def select(self, **kwargs):
         selected = []
-        for (node, obj_id, level) in self._tree:
+        for (node, obj_id, level) in iter(self):
             match = True
             for key, value in kwargs.items():
                 if node.value.get(key) != value:
@@ -334,8 +390,9 @@ class PdPatch(object):
 class PdFile(object):
     """Abstraction for a Pd format patch file."""
 
-    def __init__(self, filename):
+    def __init__(self, filename, includes = None):
         self.filename = filename
+        self.includes = includes
 
         fd = None
         try:
@@ -355,12 +412,14 @@ class PdFile(object):
             # let exceptions propagate up
 
         # Parse all lines creating a patch object.
-        self.patch = PdPatch(self.lines)
+        self.patch = PdPatch(self.lines, self.includes)
 
     def __str__(self):
         return str(self.patch)
 
 
+
+##### MAIN #####
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -368,41 +427,11 @@ if __name__ == '__main__':
     else:
         f = PdFile(sys.argv[1])
 
-    #for (node, obj_id, level) in f.patch:
-        #print '%-4d %s%s' % (obj_id, ' ' * (level * 4), str(node.value))
-            #node.parent and node.parent.value.element == 'canvas' and \
-            #node.parent.value.get('name') == 'player':
-
     def fn(node_tuple):
         (node, obj_id, level) = node_tuple
-        y = node.value.get('y')
-        if node.value.element == 'text':
-            return True
-        else:
-            return False
+        return node.value.element in (CANVAS, RESTORE)
 
-    for (node, oid, level) in f.patch:
-        print '%d%s%s' % (oid, ' ' * (level * 4), str(node.value))
-
-    #for (node, oid, level) in filter(fn, f.patch):
-        #print str(node.value)
-    #vsls = [str(n.value) for (n,o,l) in filter(fn, f.patch)]
-    #print '\n'.join(vsls)
-
-    """
-    #for (m,i) in f.patch.filter(filt):
-    #for (m, i, level) in filter(filt, f.patch):
-    for (m,i) in f.patch.select(element = 'text'):
-        parents = []
-        textobj = str(m.value)
-        while m.parent:
-            parents.insert(0, m.parent.value)
-            m = m.parent
-
-        ts = 0
-        for p in parents:
-            print '%s%s' % (' ' * ts, str(p.name()))
-            ts += 4
-        print '%s%-4d %s\n' % (' ' * ts, i, textobj)
-    """
+    # Simple test dumps out all canvas and restore objects
+    for (node, oid, level) in filter(fn, f.patch):
+        print str(node.value)
 

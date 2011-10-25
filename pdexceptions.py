@@ -15,11 +15,12 @@ class PdException(Exception):
     def __init__(self, *args):
         super(PdException, self).__init__(*args)
 
+class PdInvalidPatch(PdException):
+    def __init__(self, *args):
+        super(PdInvalidPatch, self).__init__(*args)
+
 
 class InvalidPdLine(PdException):
-    """This is the only exception this module currently throws - when it
-       encounters a line in cannot parse."""
-
     def __init__(self, line_text, line_num, err_text = 'Invalid line',
                  ex = None):
         super(InvalidPdLine, self).__init__('%s:%d "%s"' % \

@@ -16,9 +16,9 @@
 -1 -1 0 1;
 #X obj 283 46 vradio 8 1 0 7 snd rcv label 20 30 2 40 -262130 -66577
 -33289 0;
-#X obj 278 192 hradio 15 1 0 8 empty empty empty 0 -8 0 10 -262144
+#X obj 319 189 hradio 15 1 0 8 empty empty empty 0 -8 0 10 -262144
 -1 -1 0;
-#X obj 283 228 vu 15 120 empty empty -1 -8 0 10 -262130 -33289 1 0
+#X obj 324 225 vu 15 120 empty empty -1 -8 0 10 -262130 -33289 1 0
 ;
 #X obj 282 386 cnv 15 100 60 snc rcv label 20 12 0 14 -262130 -33289
 0;
@@ -37,9 +37,9 @@
 #X obj 105 75 inlet;
 #X obj 156 77 inlet;
 #X obj 45 153 outlet;
-#X obj 93 156 outlet;
-#X obj 151 150 outlet;
-#X floatatom 57 112 5 0 0 0 - - -;
+#X obj 95 177 outlet;
+#X obj 156 178 outlet;
+#X floatatom 120 117 5 0 0 0 - - -;
 #N canvas 206 204 450 300 sub.sub 0;
 #X obj 192 28 inlet named-inlet;
 #X obj 185 138 outlet named-outlet;
@@ -49,12 +49,16 @@
 #X restore 258 237 pd sub.sub;
 #X connect 0 0 6 0;
 #X connect 6 0 3 0;
+#X coords 0 -1 1 1 85 60 1 100 100;
 #X restore 204 179 pd sub;
 #X obj 458 266 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
 -1 -1;
 #X obj 459 298 f 1;
 #X floatatom 468 340 5 0 0 0 - - -;
 #X floatatom 496 258 5 0 0 0 - - -;
+#N canvas 0 0 450 300 (subpatch) 0;
+#X floatatom 287 115 5 0 0 0 - - -;
+#X restore 587 114 pd;
 #X connect 0 0 1 0;
 #X connect 15 1 16 2;
 #X connect 17 0 18 0;

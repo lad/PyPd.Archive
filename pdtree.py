@@ -7,6 +7,12 @@ no need for this code to understand anything about Pd."""
 import collections
 import pdtest
 
+# TODO
+#
+# Use weakref for child to parent links. Otherwise we have a circular reference
+# which will cause Python to use Garbage Collection, rather than ref-counting
+# which is much slower.
+
 class SimpleTree(object):
     """This tree abstraction dispenses with the notion of separate tree and
     node classes and uses a single class for both. All nodes in the tree are
