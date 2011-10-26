@@ -1,6 +1,10 @@
 
 PyPD Version 0.2 Alpha
 
+26/10/11
+- Finished 0.2
+- Finished pdlist depend functionality
+
 13/10/11
 - Moved object id generation from SimpleTree to PdPatch as this needs to
   understand Pd objects, and SimpleTree has no other need to do that. Makes
