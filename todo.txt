@@ -1,4 +1,10 @@
 
+Examples
+---------
+- Add command line examples (-x)
+- Add PdPatch/PdObject examples, how to select and modify
+
+
 Object IDs
 ----------
 Connect objects are troublesome as they refer to object ids. Inserting/deletion
@@ -11,6 +17,11 @@ baked in so you don't have to think of it when writing quick scripts.
 - The object-ids in the connection object can then be ignored on insert/delete.
 - The source and destination object-ids can be regenerated when re-writing
   the patch.
+
+
+Write
+-----
+- Add support for rewriting modify patch files.
 
 
 Parse Recursive Abstractions
