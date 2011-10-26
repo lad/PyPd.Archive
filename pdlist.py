@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
             elif opts.action == VANILLA:
                 names = set([node.value.name() for (node, obj_id, level) in \
-                             f.patch.select(known = True, vanilla = False)])
+                             f.patch.select(vanilla = False)])
                 if names:
                     if opts.print_names:
                         print 'is not pd-vanilla compatible. Missing:'
