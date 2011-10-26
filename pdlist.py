@@ -132,9 +132,6 @@ if __name__ == '__main__':
         inc = pdincludes.PdIncludes(opts.include_dirs)
         exit_codes = []
 
-        if opts.print_names and len(opts.args) == 1:
-            opts.print_names = False
-
         for fname in opts.args:
             if opts.print_names:
                 print '%s' % fname,
