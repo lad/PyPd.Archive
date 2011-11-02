@@ -123,16 +123,16 @@ if __name__ == '__main__':
         PdOpts.usage()
         sys.exit(1)
 
-    try:
-        if not opts.pd_root:
-            cfg = pdconfig.PdConfigParser(pdplatform.pref_file)
-            opts.pd_root = cfg.get('pd_root')
-        opts.include_dirs.append(os.path.join(opts.pd_root, 'extra'))
+    if not opts.pd_root:
+        cfg = pdconfig.PdConfigParser(pdplatform.pref_file)
+        opts.pd_root = cfg.get('pd_root')
+    opts.include_dirs.append(os.path.join(opts.pd_root, 'extra'))
 
-        inc = pdincludes.PdIncludes(opts.include_dirs)
-        exit_codes = []
+    inc = pdincludes.PdIncludes(opts.include_dirs)
+    exit_codes = []
 
-        for fname in opts.args:
+    for fname in opts.args:
+        try:
             if opts.print_names:
                 print '%s' % fname,
 
@@ -198,7 +198,12 @@ if __name__ == '__main__':
 
                 exit_codes.append(0)
 
-        sys.exit(any(exit_codes))
-    except Exception, ex:
-        print 'File:', fname
-        traceback.print_exc(ex)
+        except Exception, ex:
+            if opts.print_names:
+                print
+            print '***** Failed to parse file "%s"' % fname
+            print str(ex)
+            exit_codes.append(1)
+            #traceback.print_exc(ex)
+
+    sys.exit(any(exit_codes))
