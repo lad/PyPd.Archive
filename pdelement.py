@@ -173,6 +173,7 @@ VANILLA_OBJECTS = {
     'metro':        ['ms'],
     'midiin':       [],
     'midiout':      [],
+    'midirealtimein': [],
     'min':          [],
     'min~':         [],
     'mod':          ['value'],
