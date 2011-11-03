@@ -131,6 +131,10 @@ if __name__ == '__main__':
     inc = pdincludes.PdIncludes(opts.include_dirs)
     exit_codes = []
 
+    if not opts.print_names:
+        if opts.action in (DEPEND, MISSING):
+            summry_output = set()
+
     for fname in opts.args:
         try:
             if opts.print_names:
@@ -144,16 +148,6 @@ if __name__ == '__main__':
                     print '%s%s' % (' ' * (level * 4), node.value.name())
 
                 exit_codes.append(0)
-
-            elif opts.action == MISSING:
-                names = set([node.value.name() for (node, obj_id, level) in \
-                             f.patch.select(known = False)])
-                if opts.print_names:
-                    print
-                for name in names:
-                    print '\t',name
-
-                exit_codes.append(bool(names))
 
             elif opts.action == VANILLA:
                 names = set([node.value.name() for (node, obj_id, level) in \
@@ -181,6 +175,18 @@ if __name__ == '__main__':
 
                 exit_codes.append(bool(names))
 
+            elif opts.action == MISSING:
+                names = set([node.value.name() for (node, obj_id, level) in \
+                             f.patch.select(known = False)])
+                if opts.print_names:
+                    print
+                    for name in names:
+                        print '\t',name
+                else:
+                    summry_output.update(names)
+
+                exit_codes.append(bool(names))
+
             elif opts.action == DEPEND:
                 def fn(node_id_level):
                     return bool(node_id_level[0].value.include)
@@ -189,12 +195,12 @@ if __name__ == '__main__':
                                 for (node, o, l) in filter(fn, f.patch) \
                                 for node.value.include in node.value.include])
 
-                if includes:
-                    if opts.print_names:
-                        print
-                    print '\n    '.join(includes)
-                elif opts.print_names:
-                        print '\n    No dependencies'
+                if opts.print_names:
+                    print
+                    if includes:
+                        print '    %s' % '\n    '.join(includes)
+                elif includes:
+                    summry_output.update(includes)
 
                 exit_codes.append(0)
 
@@ -206,4 +212,10 @@ if __name__ == '__main__':
             exit_codes.append(1)
             #traceback.print_exc(ex)
 
+    if not opts.print_names and opts.action in (DEPEND, MISSING):
+        out = list(summry_output)
+        out.sort()
+        print '\n'.join(out)
+
+    # Exit with 0 for success or 1 for error
     sys.exit(any(exit_codes))
